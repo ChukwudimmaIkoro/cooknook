@@ -28,7 +28,6 @@ from typing import List, Dict, Tuple
 from models import Recipe, SearchRequest, SearchResponse
 
 
-#Recipe search engine class for searching recipes based on user query and preferences
 class RecipeSearchEngine:
     """
     Main search engine class that handles recipe recommendations.
@@ -36,7 +35,7 @@ class RecipeSearchEngine:
     This class loads recipes, generates embeddings, and provides search functionality
     using semantic similarity rather than simple keyword matching.
     """
-    #Function to initialize the search engine with recipe data and ML model
+    
     def __init__(self, recipes_path: str):
         """
         Initialize the search engine with recipe data and ML model.
@@ -67,15 +66,21 @@ class RecipeSearchEngine:
         # - Balances speed and quality
         # - Works well for semantic similarity tasks
         print("Loading sentence transformer model...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
         
-        # Step 3: Generate embeddings for all recipes
-        # This is done once at startup and stored in memory for fast searches
-        print("Generating embeddings for all recipes...")
-        self.recipe_embeddings = self._generate_recipe_embeddings()
+        # Try to use GPU if available for much faster embedding generation
+        # This can speed up processing by 10-50x depending on GPU
+        import torch
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f"Using device: {device}")
+        
+        self.model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+        
+        # Step 3: Generate or load cached embeddings
+        # Embeddings are expensive to compute but can be cached to disk
+        print("Loading or generating embeddings...")
+        self.recipe_embeddings = self._load_or_generate_embeddings(recipes_path)
         print("Search engine ready!")
     
-    #Function to convert a recipe object to a text representation for embedding
     def _create_recipe_text(self, recipe: Recipe) -> str:
         """
         Convert a recipe object to a text representation for embedding.
@@ -104,7 +109,6 @@ class RecipeSearchEngine:
         ingredients_text = ", ".join(recipe.ingredients)
         return f"{recipe.name} - {recipe.cuisine} cuisine with ingredients: {ingredients_text}"
     
-    #Function to generate vector embeddings for all recipes in the dataset
     def _generate_recipe_embeddings(self) -> np.ndarray:
         """
         Generate vector embeddings for all recipes in the dataset.
@@ -129,11 +133,105 @@ class RecipeSearchEngine:
         
         # Generate embeddings using the model
         # show_progress_bar=True displays progress during the operation
-        embeddings = self.model.encode(recipe_texts, show_progress_bar=True)
+        # batch_size can be increased for faster processing on GPU (default: 32)
+        embeddings = self.model.encode(
+            recipe_texts, 
+            show_progress_bar=True,
+            batch_size=128  # Increased from default 32 for faster processing
+        )
         
         return embeddings
     
-    #Function to calculate which ingredients match and which are missing
+    def _get_embeddings_cache_path(self, recipes_path: str) -> str:
+        """
+        Get the path where embeddings should be cached.
+        
+        Embeddings are saved alongside the recipes.json file
+        with a .npy extension for numpy arrays.
+        
+        Args:
+            recipes_path (str): Path to recipes.json
+        
+        Returns:
+            str: Path to embeddings cache file
+        
+        Example:
+            recipes_path = "../data/recipes.json"
+            returns: "../data/recipes_embeddings.npy"
+        """
+        import os
+        base_path = os.path.splitext(recipes_path)[0]
+        return f"{base_path}_embeddings.npy"
+    
+    def _load_or_generate_embeddings(self, recipes_path: str) -> np.ndarray:
+        """
+        Load embeddings from cache or generate them if cache doesn't exist.
+        
+        This dramatically speeds up subsequent server startups by avoiding
+        re-computation of embeddings. The cache is invalidated if the
+        recipes file is newer than the cache file.
+        
+        Args:
+            recipes_path (str): Path to recipes.json file
+        
+        Returns:
+            np.ndarray: Recipe embeddings matrix
+        
+        Cache Strategy:
+            - Check if embeddings cache file exists
+            - Check if cache is newer than recipes file (not stale)
+            - Check if cache has correct number of embeddings
+            - If all checks pass, load from cache
+            - Otherwise, generate new embeddings and save to cache
+        """
+        import os
+        
+        cache_path = self._get_embeddings_cache_path(recipes_path)
+        
+        # Check if cache exists and is valid
+        if os.path.exists(cache_path):
+            print(f"Found embeddings cache at {cache_path}")
+            
+            # Check if cache is newer than recipes file (not stale)
+            cache_mtime = os.path.getmtime(cache_path)
+            recipes_mtime = os.path.getmtime(recipes_path)
+            
+            if cache_mtime > recipes_mtime:
+                print("Loading embeddings from cache...")
+                try:
+                    embeddings = np.load(cache_path)
+                    
+                    # Verify cache has correct number of embeddings
+                    if len(embeddings) == len(self.recipes):
+                        print(f"Successfully loaded {len(embeddings)} embeddings from cache")
+                        return embeddings
+                    else:
+                        print(f"Cache size mismatch: {len(embeddings)} vs {len(self.recipes)} recipes")
+                        print("Regenerating embeddings...")
+                except Exception as e:
+                    print(f"Error loading cache: {e}")
+                    print("Regenerating embeddings...")
+            else:
+                print("Cache is outdated (recipes file is newer)")
+                print("Regenerating embeddings...")
+        else:
+            print("No embeddings cache found")
+        
+        # Generate new embeddings
+        print("Generating embeddings for all recipes...")
+        embeddings = self._generate_recipe_embeddings()
+        
+        # Save to cache for next time
+        print(f"Saving embeddings to cache: {cache_path}")
+        try:
+            np.save(cache_path, embeddings)
+            print("Embeddings cached successfully!")
+        except Exception as e:
+            print(f"Warning: Could not save embeddings cache: {e}")
+            print("Embeddings will need to be regenerated on next startup")
+        
+        return embeddings
+    
     def _calculate_ingredient_overlap(
         self, 
         user_ingredients: List[str], 
@@ -174,7 +272,6 @@ class RecipeSearchEngine:
         
         return matching, missing
     
-    #Function to search for recipes matching the user's preferences
     def search(self, request: SearchRequest) -> List[SearchResponse]:
         """
         Search for recipes matching the user's preferences.

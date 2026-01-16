@@ -1,5 +1,5 @@
 """
-prepare_data.py - Food.com Dataset Preparation
+prepare_foodcom_data.py - Food.com Dataset Preparation
 
 This script prepares the Food.com recipe dataset for use with the search engine.
 It handles data loading, cleaning, validation, cuisine inference, and standardization.
@@ -13,7 +13,7 @@ Key Features:
 - Saves processed data in clean JSON format
 
 Run this script once before starting the API server:
-    python prepare_data.py
+    python prepare_foodcom_data.py
 
 Input: RAW_recipes.csv from Food.com dataset
 Output: Cleaned recipes.json ready for the search engine
@@ -25,7 +25,7 @@ import ast
 import re
 from collections import Counter
 
-#Function to infer cuisine from recipe name and tags
+
 def infer_cuisine_from_name_and_tags(name, tags):
     """
     Infer cuisine type from recipe name and tags.
@@ -84,7 +84,6 @@ def infer_cuisine_from_name_and_tags(name, tags):
     return 'american'
 
 
-#Function to clean and standardize ingredient text
 def clean_ingredient(ingredient):
     """
     Clean and standardize ingredient text.
@@ -128,8 +127,7 @@ def clean_ingredient(ingredient):
     return ingredient.strip()
 
 
-#Function to prepare the dataset for the search engine
-def prepare_dataset(input_path: str, output_path: str, max_recipes: int = None):
+def prepare_foodcom_dataset(input_path: str, output_path: str, max_recipes: int = None):
     """
     Prepare Food.com recipe dataset for the search engine.
     
@@ -336,15 +334,20 @@ if __name__ == "__main__":
     OUTPUT_PATH = "../data/recipes.json"
     
     # Optional: Set max_recipes to a smaller number for testing
-    # MAX_RECIPES = 10000  # Process only first 10k recipes for testing
-    MAX_RECIPES = None  # Process all recipes
+    # This dramatically speeds up embedding generation during development
+    # Uncomment one of these lines:
+    
+    # MAX_RECIPES = 1000   # Very fast (~5 seconds) - good for initial testing
+    # MAX_RECIPES = 10000  # Fast (~30 seconds) - good for development
+    # MAX_RECIPES = 50000  # Medium (~2 minutes) - decent dataset size
+    MAX_RECIPES = None     # Slow (~3-5 minutes) - full dataset (230k recipes)
     
     # Ensure the data directory exists
     import os
     os.makedirs("../data", exist_ok=True)
     
     # Run the preparation pipeline
-    prepare_dataset(INPUT_PATH, OUTPUT_PATH, MAX_RECIPES)
+    prepare_foodcom_dataset(INPUT_PATH, OUTPUT_PATH, MAX_RECIPES)
     
     print("\n" + "="*60)
     print("DATA PREPARATION COMPLETE!")
