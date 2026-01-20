@@ -340,7 +340,7 @@ if __name__ == "__main__":
     # MAX_RECIPES = 1000   # Very fast (~5 seconds) - good for initial testing
     # MAX_RECIPES = 10000  # Fast (~30 seconds) - good for development
     # MAX_RECIPES = 50000  # Medium (~2 minutes) - decent dataset size
-    MAX_RECIPES = None     # Slow (~3-5 minutes) - full dataset (230k recipes)
+    MAX_RECIPES = 10000     # Slow (~3-5 minutes) - full dataset (230k recipes)
     
     # Ensure the data directory exists
     import os
