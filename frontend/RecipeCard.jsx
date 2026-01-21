@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { ChefHat, Check, X } from 'lucide-react';
+import { ChefHat, Check, X, Clock, List } from 'lucide-react';
 
 /**
  * RecipeCard Component
@@ -120,6 +120,25 @@ const RecipeCard = ({ recipe }) => {
         </div>
       </div>
 
+      {/* Recipe Name - NEW */}
+      <h3 className="recipe-name">{recipe.name}</h3>
+
+      {/* Recipe Metadata - NEW */}
+      <div className="recipe-meta">
+        {recipe.minutes && (
+          <div className="meta-item">
+            <Clock size={16} />
+            <span>{recipe.minutes} min</span>
+          </div>
+        )}
+        {recipe.n_steps && (
+          <div className="meta-item">
+            <List size={16} />
+            <span>{recipe.n_steps} steps</span>
+          </div>
+        )}
+      </div>
+
       {/* Recipe ID (useful for debugging/referencing) */}
       <div className="recipe-id">
         Recipe #{recipe.id}
@@ -131,6 +150,16 @@ const RecipeCard = ({ recipe }) => {
           <Check size={16} />
           You have most ingredients!
         </div>
+      )}
+
+      {/* Description - NEW */}
+      {recipe.description && (
+        <p className="recipe-description">
+          {recipe.description.length > 150 
+            ? recipe.description.substring(0, 150) + '...'
+            : recipe.description
+          }
+        </p>
       )}
 
       {/* Ingredients Section */}
