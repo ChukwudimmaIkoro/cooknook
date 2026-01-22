@@ -1,65 +1,38 @@
 /**
- * App.jsx - Main Application Component
+ * App.jsx - Main Application Component (Mobile-Style Layout)
  * 
- * This is the root component that:
- * 1. Manages application state (search results, loading, errors)
- * 2. Coordinates communication between components
- * 3. Handles API calls via the service layer
- * 4. Provides overall layout and structure
+ * Mobile app-style layout with:
+ * - Top app bar with status
+ * - Fragment/view container (shows different content based on active tab)
+ * - Bottom navigation bar (4 tabs)
  * 
- * Component Hierarchy:
- * App
- * ├── Header (inline)
- * ├── SearchForm (search input)
- * └── RecipeList (results display)
- *     └── RecipeCard[] (individual recipes)
+ * Architecture similar to Android Activities/Fragments or iOS Tab Bar Controller
  */
 
 import React, { useState, useEffect } from 'react';
-import SearchForm from './components/SearchForm';
-import RecipeList from './components/RecipeList';
-import { searchRecipes, checkHealth } from './services/api';
-import { Utensils, AlertCircle } from 'lucide-react';
+import BottomNav from './components/BottomNav';
+import PantryView from './views/PantryView';
+import RecipesView from './views/RecipesView';
+import SavedView from './views/SavedView';
+import AccountView from './views/AccountView';
+import { checkHealth } from './services/api';
+import { Utensils, AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import './App.css';
 
-/**
- * Main App Component
- * 
- * State Management:
- * - recipes: Array of search results
- * - isLoading: Whether a search is in progress
- * - error: Error message (null if no error)
- * - backendStatus: Whether backend is connected
- */
 function App() {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
   
   /**
-   * Search results state
-   * Holds array of recipe objects returned from backend
+   * Currently active tab/view
+   * Default: 'recipes' (main feature)
    */
-  const [recipes, setRecipes] = useState([]);
-  
-  /**
-   * Loading state
-   * True when search is in progress, false otherwise
-   * Used to show loading indicators and disable form
-   */
-  const [isLoading, setIsLoading] = useState(false);
-  
-  /**
-   * Error state
-   * Holds error message string when search fails
-   * Null when no error
-   */
-  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('recipes');
   
   /**
    * Backend connection status
-   * Tracks whether the Python backend is reachable
-   * Used to show connection warnings
+   * Monitors if the Python API is available
    */
   const [backendStatus, setBackendStatus] = useState({
     isConnected: false,
@@ -72,13 +45,8 @@ function App() {
   // ============================================================================
   
   /**
-   * Check backend health on component mount
+   * Check backend health on app load
    * Verifies the Python API is running and accessible
-   * 
-   * This runs once when the app loads to:
-   * - Verify backend connection
-   * - Get dataset size
-   * - Show warning if backend is down
    */
   useEffect(() => {
     const verifyBackend = async () => {
@@ -100,56 +68,28 @@ function App() {
     };
 
     verifyBackend();
-  }, []); // Empty dependency array = run once on mount
+  }, []);
 
   // ============================================================================
-  // EVENT HANDLERS
+  // RENDER HELPERS
   // ============================================================================
   
   /**
-   * Handle search form submission
-   * 
-   * This function:
-   * 1. Sets loading state
-   * 2. Calls backend API with search parameters
-   * 3. Updates results or error state
-   * 4. Clears loading state
-   * 
-   * @param {Object} searchParams - Search parameters from form
-   * @param {string} searchParams.query - Natural language query
-   * @param {string[]} searchParams.ingredients - Available ingredients
-   * @param {string|null} searchParams.cuisine - Cuisine filter
-   * @param {number|null} searchParams.maxTime - Maximum cooking time filter
-   * @param {number} searchParams.maxResults - Number of results to return
+   * Render the appropriate view based on active tab
+   * Similar to Fragment transaction in Android or view controller in iOS
    */
-  const handleSearch = async (searchParams) => {
-    // Step 1: Set loading state and clear previous errors
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Step 2: Call API with search parameters
-      const results = await searchRecipes(searchParams);
-      
-      // Step 3: Update recipes state with results
-      setRecipes(results);
-      
-      // Log results for debugging
-      console.log(`Found ${results.length} recipes`);
-      
-    } catch (err) {
-      // Step 4: Handle errors
-      console.error('Search failed:', err);
-      
-      // Set user-friendly error message
-      setError(err.message || 'Failed to search recipes. Please try again.');
-      
-      // Clear results on error
-      setRecipes([]);
-      
-    } finally {
-      // Step 5: Always clear loading state
-      setIsLoading(false);
+  const renderActiveView = () => {
+    switch (activeTab) {
+      case 'pantry':
+        return <PantryView />;
+      case 'recipes':
+        return <RecipesView />;
+      case 'saved':
+        return <SavedView />;
+      case 'account':
+        return <AccountView />;
+      default:
+        return <RecipesView />;
     }
   };
 
@@ -158,76 +98,52 @@ function App() {
   // ============================================================================
   
   return (
-    <div className="app">
-      {/* ====================================================================
-          HEADER SECTION
-          Shows app title and backend connection status
-      ==================================================================== */}
-      <header className="app-header">
-        <div className="header-content">
-          <div className="header-title">
-            <Utensils size={32} />
-            <h1>Recipe Recommendation Engine</h1>
+    <div className="app mobile-layout">
+      {/* Top App Bar */}
+      <header className="app-bar">
+        <div className="app-bar-content">
+          <div className="app-bar-title">
+            <Utensils size={28} />
+            <h1>CookNook</h1>
           </div>
-          <p className="header-subtitle">
-            AI-powered recipe search using semantic similarity
-          </p>
           
-          {/* Backend Status Indicator */}
-          {backendStatus.isChecking ? (
-            <div className="status-badge checking">
-              Checking backend connection...
-            </div>
-          ) : backendStatus.isConnected ? (
-            <div className="status-badge connected">
-              ✓ Connected to backend ({backendStatus.totalRecipes.toLocaleString()} recipes)
-            </div>
-          ) : (
-            <div className="status-badge disconnected">
-              <AlertCircle size={16} />
-              Backend not connected. Start the Python server on port 8000.
-            </div>
-          )}
+          {/* Connection Status Indicator */}
+          <div className="connection-status">
+            {backendStatus.isChecking ? (
+              <div className="status-indicator checking">
+                <Wifi size={16} className="pulse" />
+              </div>
+            ) : backendStatus.isConnected ? (
+              <div className="status-indicator connected" title={`${backendStatus.totalRecipes.toLocaleString()} recipes`}>
+                <Wifi size={16} />
+              </div>
+            ) : (
+              <div className="status-indicator disconnected" title="Backend offline">
+                <WifiOff size={16} />
+              </div>
+            )}
+          </div>
         </div>
+        
+        {/* Connection Warning Banner (only if disconnected) */}
+        {!backendStatus.isChecking && !backendStatus.isConnected && (
+          <div className="connection-banner">
+            <AlertCircle size={16} />
+            <span>Backend offline. Start server on port 8000.</span>
+          </div>
+        )}
       </header>
 
-      {/* ====================================================================
-          MAIN CONTENT SECTION
-          Contains search form and results
-      ==================================================================== */}
-      <main className="app-main">
-        <div className="app-container">
-          {/* Search Form */}
-          <section className="search-section">
-            <SearchForm 
-              onSearch={handleSearch}
-              isLoading={isLoading}
-            />
-          </section>
-
-          {/* Results Section */}
-          <section className="results-section">
-            <RecipeList 
-              recipes={recipes}
-              isLoading={isLoading}
-              error={error}
-            />
-          </section>
-        </div>
+      {/* Main Content Area - Fragment Container */}
+      <main className="app-content">
+        {renderActiveView()}
       </main>
 
-      {/* ====================================================================
-          FOOTER SECTION
-          App information and credits
-      ==================================================================== */}
-      <footer className="app-footer">
-        <p>
-          Built with React + FastAPI + Sentence Transformers
-        </p>
-        <p className="footer-note">
-          Search uses semantic similarity to find recipes matching your preferences
-        </p>
-      </footer>
+      {/* Bottom Navigation */}
+      <BottomNav 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </div>
   );
 }
