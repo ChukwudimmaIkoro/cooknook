@@ -9,7 +9,7 @@
 CookNook is a (currently) simple AI-powered recipe search application. Users search recipes with natural language queries, ingredients, cuisine filters, and cooking time limits.
 
 ## Demo (1/27/2026)
-![CookNook Web Demo 1/27/2026](demo.gif)
+![CookNook Web Demo 1/27/2026](cooknoofgif.gif)
 
 ## Tech Stack
 
