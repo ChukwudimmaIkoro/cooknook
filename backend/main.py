@@ -3,11 +3,11 @@ main.py - CookNook API Server
 
 AI-powered recipe recommendation engine with user authentication.
 
-Version: 1.1.0
+Version: 1.2.0
 Features:
 - Semantic recipe search (230k+ recipes)
 - User authentication (JWT)
-- Search history tracking (coming in Step 3)
+- Search history tracking (NEW - Step 3)
 - Personalized recommendations (coming in Step 4)
 """
 
@@ -24,7 +24,7 @@ import os
 # Import project modules
 from models import SearchRequest, SearchResponse, Recipe
 from search import RecipeSearchEngine
-from database import get_db, User
+from database import get_db, User, SearchHistory
 from auth import (
     create_user,
     authenticate_user,
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="CookNook API",
     description="AI-powered recipe recommendation engine with user authentication",
-    version="1.1.0",
+    version="1.2.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -115,6 +115,71 @@ class TokenResponse(BaseModel):
     user: UserResponse
 
 
+class SearchHistoryResponse(BaseModel):
+    """Search history entry response schema"""
+    id: int
+    query: Optional[str]
+    ingredients: Optional[str]
+    cuisine: Optional[str]
+    max_time: Optional[int]
+    results_count: int
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def track_search_history(
+    db: Session,
+    user_id: int,
+    request: SearchRequest,
+    results: List[SearchResponse]
+) -> SearchHistory:
+    """
+    Track user's search in the database
+    
+    This function saves search parameters and metadata for later analysis.
+    Used to learn user preferences and build personalized recommendations.
+    
+    Args:
+        db: Database session
+        user_id: ID of the user performing the search
+        request: Search request parameters
+        results: Search results returned
+    
+    Returns:
+        SearchHistory: Created search history record
+    """
+    # Convert ingredients list to comma-separated string for storage
+    ingredients_str = None
+    if request.ingredients:
+        ingredients_str = ",".join(request.ingredients)
+    
+    # Create search history entry
+    history_entry = SearchHistory(
+        user_id=user_id,
+        query=request.query if request.query else None,
+        ingredients=ingredients_str,
+        cuisine=request.cuisine,
+        max_time=request.max_time,
+        results_count=len(results),
+        timestamp=datetime.utcnow()
+    )
+    
+    # Save to database
+    db.add(history_entry)
+    db.commit()
+    db.refresh(history_entry)
+    
+    logger.info(f"Tracked search for user {user_id}: '{request.query}' -> {len(results)} results")
+    
+    return history_entry
+
+
 # ============================================================================
 # HEALTH CHECK ENDPOINT
 # ============================================================================
@@ -130,9 +195,9 @@ async def root():
     
     return {
         "message": "CookNook API",
-        "version": "1.1.0",
+        "version": "1.2.0",
         "status": "running",
-        "features": ["recipe_search", "user_authentication"],
+        "features": ["recipe_search", "user_authentication", "search_history"],
         "recipe_count": recipe_count
     }
 
@@ -348,23 +413,6 @@ async def search_recipes(
             "max_time": 30,
             "max_results": 10
         }
-    
-    Example Response:
-        [
-            {
-                "id": 12345,
-                "name": "Teriyaki Chicken with Broccoli",
-                "cuisine": "asian",
-                "ingredients": ["chicken", "broccoli", "soy sauce"],
-                "similarity_score": 0.89,
-                "matching_ingredients": ["chicken", "broccoli"],
-                "missing_ingredients": ["soy sauce"],
-                "steps": ["Cut chicken...", "Cook broccoli..."],
-                "minutes": 25,
-                "n_steps": 4,
-                "description": "Quick and healthy Asian-inspired dish"
-            }
-        ]
     """
     try:
         # Perform semantic search
@@ -374,19 +422,18 @@ async def search_recipes(
         user_info = f"user={current_user.username}" if current_user else "anonymous"
         logger.info(f"Search: '{request.query}' ({user_info}) - {len(results)} results")
         
-        # TODO: Track search history for authenticated users (Step 3)
-        # if current_user:
-        #     from database import SearchHistory
-        #     history = SearchHistory(
-        #         user_id=current_user.id,
-        #         query=request.query,
-        #         ingredients=",".join(request.ingredients) if request.ingredients else None,
-        #         cuisine=request.cuisine,
-        #         max_time=request.max_time,
-        #         results_count=len(results)
-        #     )
-        #     db.add(history)
-        #     db.commit()
+        # Track search history for authenticated users (NEW in Step 3)
+        if current_user:
+            try:
+                track_search_history(
+                    db=db,
+                    user_id=current_user.id,
+                    request=request,
+                    results=results
+                )
+            except Exception as e:
+                # Don't fail the search if history tracking fails
+                logger.error(f"Failed to track search history: {str(e)}")
         
         return results
     
@@ -395,6 +442,153 @@ async def search_recipes(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {str(e)}"
+        )
+
+
+# ============================================================================
+# SEARCH HISTORY ENDPOINTS (NEW - Step 3)
+# ============================================================================
+
+@app.get("/history", response_model=List[SearchHistoryResponse], tags=["Search History"])
+async def get_search_history(
+    limit: int = 20,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get user's search history
+    
+    Returns recent searches made by the authenticated user.
+    Useful for showing "recent searches" in the UI.
+    
+    Args:
+        limit: Maximum number of history entries to return (default: 20)
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        List[SearchHistoryResponse]: List of search history entries
+    
+    Raises:
+        401: If not authenticated
+    """
+    try:
+        # Query search history for this user, ordered by most recent first
+        history = db.query(SearchHistory).filter(
+            SearchHistory.user_id == current_user.id
+        ).order_by(
+            SearchHistory.timestamp.desc()
+        ).limit(limit).all()
+        
+        logger.info(f"Retrieved {len(history)} history entries for user {current_user.username}")
+        
+        return [SearchHistoryResponse.from_orm(entry) for entry in history]
+    
+    except Exception as e:
+        logger.error(f"Error retrieving search history: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve search history"
+        )
+
+
+@app.delete("/history/{history_id}", tags=["Search History"])
+async def delete_search_history_entry(
+    history_id: int,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a specific search history entry
+    
+    Allows users to remove individual searches from their history.
+    
+    Args:
+        history_id: ID of the history entry to delete
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        Success message
+    
+    Raises:
+        401: If not authenticated
+        404: If history entry not found or doesn't belong to user
+    """
+    try:
+        # Find the history entry
+        entry = db.query(SearchHistory).filter(
+            SearchHistory.id == history_id,
+            SearchHistory.user_id == current_user.id  # Ensure user owns this entry
+        ).first()
+        
+        if not entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Search history entry not found"
+            )
+        
+        # Delete the entry
+        db.delete(entry)
+        db.commit()
+        
+        logger.info(f"Deleted history entry {history_id} for user {current_user.username}")
+        
+        return {"message": "Search history entry deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting search history: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete search history entry"
+        )
+
+
+@app.delete("/history", tags=["Search History"])
+async def clear_search_history(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Clear all search history for the current user
+    
+    Deletes all search history entries for the authenticated user.
+    Useful for privacy or starting fresh.
+    
+    Args:
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        Success message with count of deleted entries
+    
+    Raises:
+        401: If not authenticated
+    """
+    try:
+        # Delete all history entries for this user
+        deleted_count = db.query(SearchHistory).filter(
+            SearchHistory.user_id == current_user.id
+        ).delete()
+        
+        db.commit()
+        
+        logger.info(f"Cleared {deleted_count} history entries for user {current_user.username}")
+        
+        return {
+            "message": "Search history cleared successfully",
+            "deleted_count": deleted_count
+        }
+    
+    except Exception as e:
+        logger.error(f"Error clearing search history: {str(e)}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to clear search history"
         )
 
 
@@ -413,7 +607,7 @@ async def startup_event():
     global search_engine
     
     logger.info("=" * 60)
-    logger.info("Starting CookNook API v1.1.0")
+    logger.info("Starting CookNook API v1.2.0")
     logger.info("=" * 60)
     
     # Initialize search engine
@@ -439,6 +633,7 @@ async def startup_event():
         from database import engine
         logger.info(f"✓ Database: SQLite (users.db)")
         logger.info(f"✓ Authentication: JWT (7-day tokens)")
+        logger.info(f"✓ Search History: Enabled")
     except Exception as e:
         logger.warning(f"⚠️  Database connection issue: {str(e)}")
         logger.warning("Authentication endpoints may not work correctly")
