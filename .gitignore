@@ -62,3 +62,7 @@ dmypy.json
 *.sqlite
 *.sqlite3
 backend/users.db
+
+# Test/Utility scripts
+backend/quick_test.ps1
+backend/cleanup_test_users.py
