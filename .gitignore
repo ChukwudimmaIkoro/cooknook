@@ -56,3 +56,9 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+backend/users.db
