@@ -3,19 +3,19 @@ main.py - CookNook API Server
 
 AI-powered recipe recommendation engine with user authentication.
 
-Version: 1.2.0
+Version: 1.3.0
 Features:
 - Semantic recipe search (230k+ recipes)
 - User authentication (JWT)
-- Search history tracking (NEW - Step 3)
-- Personalized recommendations (coming in Step 4)
+- Search history tracking
+- Personalized recommendations (NEW - Step 4)
 """
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import logging
@@ -33,6 +33,13 @@ from auth import (
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
+from personalization import (
+    analyze_user_preferences,
+    personalize_search_results,
+    generate_recommendations,
+    update_user_preferences_manual,
+    UserPreferences
+)
 
 # ============================================================================
 # LOGGING CONFIGURATION
@@ -49,7 +56,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="CookNook API",
     description="AI-powered recipe recommendation engine with user authentication",
-    version="1.2.0",
+    version="1.3.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -102,6 +109,8 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     created_at: datetime
     last_active: Optional[datetime]
+    favorite_cuisines: Optional[str] = None
+    dietary_restrictions: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -127,6 +136,22 @@ class SearchHistoryResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class UserPreferencesResponse(BaseModel):
+    """User preferences response schema"""
+    user_id: int
+    favorite_cuisines: List[Dict[str, Any]]
+    favorite_ingredients: List[Dict[str, Any]]
+    avg_time_preference: Optional[float]
+    total_searches: int
+    recent_searches: int
+
+
+class ManualPreferencesRequest(BaseModel):
+    """Manual preference update request schema"""
+    favorite_cuisines: Optional[List[str]] = None
+    dietary_restrictions: Optional[List[str]] = None
 
 
 # ============================================================================
@@ -195,9 +220,9 @@ async def root():
     
     return {
         "message": "CookNook API",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "status": "running",
-        "features": ["recipe_search", "user_authentication", "search_history"],
+        "features": ["recipe_search", "user_authentication", "search_history", "personalization"],
         "recipe_count": recipe_count
     }
 
@@ -593,6 +618,253 @@ async def clear_search_history(
 
 
 # ============================================================================
+# PERSONALIZATION ENDPOINTS (NEW - Step 4)
+# ============================================================================
+
+@app.get("/recommendations", response_model=List[Dict[str, Any]], tags=["Personalization"])
+async def get_recommendations(
+    limit: int = 10,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get personalized recipe recommendations
+    
+    Generates a personalized feed of recipes based on the user's search history
+    and learned preferences. No search query required - recommendations are
+    automatically tailored to the user.
+    
+    Args:
+        limit: Number of recommendations to return (default: 10, max: 50)
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        List[SearchResponse]: Personalized recipe recommendations
+    
+    Raises:
+        401: If not authenticated
+        404: If user has no search history yet
+    
+    Algorithm:
+        1. Analyze user's search history to extract preferences
+        2. Build synthetic search query from top preferences
+        3. Execute semantic search with learned parameters
+        4. Apply personalization boost to results
+        5. Return top N recommendations
+    """
+    try:
+        # Limit max recommendations
+        limit = min(limit, 50)
+        
+        # Generate recommendations
+        recommendations = generate_recommendations(
+            user_id=current_user.id,
+            db=db,
+            search_engine=search_engine,
+            limit=limit
+        )
+        
+        if not recommendations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No recommendations available. Try searching for recipes first to build your preference profile."
+            )
+        
+        logger.info(f"Generated {len(recommendations)} recommendations for user {current_user.username}")
+        
+        return recommendations
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating recommendations: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate recommendations"
+        )
+
+
+@app.get("/preferences", response_model=UserPreferencesResponse, tags=["Personalization"])
+async def get_user_preferences(
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get user's learned preferences
+    
+    Returns an analysis of the user's search history showing what they
+    typically search for and prefer. Useful for showing users their
+    "taste profile" or allowing them to see what the system has learned.
+    
+    Args:
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        UserPreferencesResponse: User's learned preferences
+    
+    Raises:
+        401: If not authenticated
+    
+    Example Response:
+        {
+            "user_id": 1,
+            "favorite_cuisines": [
+                {"cuisine": "italian", "count": 15},
+                {"cuisine": "mexican", "count": 8}
+            ],
+            "favorite_ingredients": [
+                {"ingredient": "tomatoes", "count": 12},
+                {"ingredient": "garlic", "count": 10}
+            ],
+            "avg_time_preference": 35.5,
+            "total_searches": 45,
+            "recent_searches": 12
+        }
+    """
+    try:
+        preferences = analyze_user_preferences(current_user.id, db)
+        
+        logger.info(f"Retrieved preferences for user {current_user.username}")
+        
+        return UserPreferencesResponse(**preferences.to_dict())
+    
+    except Exception as e:
+        logger.error(f"Error retrieving preferences: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve preferences"
+        )
+
+
+@app.put("/preferences", tags=["Personalization"])
+async def update_preferences(
+    preferences: ManualPreferencesRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually update user preferences
+    
+    Allows users to explicitly set their preferences instead of relying
+    only on learned preferences from search history. Useful for new users
+    or when users want to override learned preferences.
+    
+    Args:
+        preferences: Manual preference settings
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        Success message
+    
+    Raises:
+        401: If not authenticated
+        500: If update fails
+    
+    Example Request:
+        {
+            "favorite_cuisines": ["italian", "japanese", "mexican"],
+            "dietary_restrictions": ["vegetarian", "gluten-free"]
+        }
+    """
+    try:
+        success = update_user_preferences_manual(
+            user_id=current_user.id,
+            db=db,
+            favorite_cuisines=preferences.favorite_cuisines,
+            dietary_restrictions=preferences.dietary_restrictions
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update preferences"
+            )
+        
+        logger.info(f"Updated manual preferences for user {current_user.username}")
+        
+        return {
+            "message": "Preferences updated successfully",
+            "favorite_cuisines": preferences.favorite_cuisines,
+            "dietary_restrictions": preferences.dietary_restrictions
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating preferences: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update preferences"
+        )
+
+
+@app.post("/search/personalized", response_model=List[Dict[str, Any]], tags=["Recipes"])
+async def search_recipes_personalized(
+    request: SearchRequest,
+    current_user: User = Depends(require_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Search for recipes with personalization applied
+    
+    Same as regular search but results are re-ranked based on the user's
+    learned preferences. Recipes matching user preferences are boosted higher.
+    
+    Args:
+        request: Search parameters
+        current_user: Authenticated user (injected from token)
+        db: Database session (injected)
+    
+    Returns:
+        List[SearchResponse]: Personalized search results
+    
+    Raises:
+        401: If not authenticated
+        500: If search fails
+    
+    Note:
+        Results include both:
+        - similarity_score: Original semantic match score
+        - personalized_score: Boosted score based on preferences
+        - personalization_boost: Multiplier applied
+    """
+    try:
+        # Execute regular search
+        results = search_engine.search(request)
+        
+        # Track search history
+        try:
+            track_search_history(
+                db=db,
+                user_id=current_user.id,
+                request=request,
+                results=results
+            )
+        except Exception as e:
+            logger.error(f"Failed to track search history: {str(e)}")
+        
+        # Get user preferences
+        preferences = analyze_user_preferences(current_user.id, db)
+        
+        # Apply personalization
+        personalized_results = personalize_search_results(results, preferences)
+        
+        logger.info(f"Personalized search: '{request.query}' (user={current_user.username}) - {len(personalized_results)} results")
+        
+        return personalized_results
+    
+    except Exception as e:
+        logger.error(f"Personalized search error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Personalized search failed: {str(e)}"
+        )
+
+
+# ============================================================================
 # STARTUP/SHUTDOWN EVENTS
 # ============================================================================
 
@@ -607,7 +879,7 @@ async def startup_event():
     global search_engine
     
     logger.info("=" * 60)
-    logger.info("Starting CookNook API v1.2.0")
+    logger.info("Starting CookNook API v1.3.0")
     logger.info("=" * 60)
     
     # Initialize search engine
@@ -634,6 +906,7 @@ async def startup_event():
         logger.info(f"✓ Database: SQLite (users.db)")
         logger.info(f"✓ Authentication: JWT (7-day tokens)")
         logger.info(f"✓ Search History: Enabled")
+        logger.info(f"✓ Personalization: Enabled")
     except Exception as e:
         logger.warning(f"⚠️  Database connection issue: {str(e)}")
         logger.warning("Authentication endpoints may not work correctly")
