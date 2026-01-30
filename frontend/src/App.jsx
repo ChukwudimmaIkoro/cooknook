@@ -1,73 +1,69 @@
 /**
- * App.jsx - Main Application Component (Mobile-Style Layout)
+ * App.jsx - Main Application Component (Updated with Authentication)
  * 
- * Mobile app-style layout with:
- * - Top app bar with status
- * - Fragment/view container (shows different content based on active tab)
- * - Bottom navigation bar (4 tabs)
- * 
- * Architecture similar to Android Activities/Fragments or iOS Tab Bar Controller
+ * Root component that manages:
+ * - Authentication state via AuthProvider
+ * - Tab-based navigation
+ * - View routing
+ * - Global layout
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { AuthProvider } from './contexts/AuthContext';
 import BottomNav from './components/BottomNav';
 import PantryView from './views/PantryView';
 import RecipesView from './views/RecipesView';
 import SavedView from './views/SavedView';
 import AccountView from './views/AccountView';
-import { checkHealth } from './services/api';
-import { Utensils, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { Wifi, WifiOff } from 'lucide-react';
 import './App.css';
 
+/**
+ * App Component
+ * 
+ * Top-level component with authentication and navigation
+ */
 function App() {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
   
   /**
-   * Currently active tab/view
-   * Default: 'recipes' (main feature)
+   * Active tab state
+   * Controls which view is displayed
    */
   const [activeTab, setActiveTab] = useState('recipes');
   
   /**
    * Backend connection status
-   * Monitors if the Python API is available
+   * Used to show connection indicator
    */
-  const [backendStatus, setBackendStatus] = useState({
-    isConnected: false,
-    isChecking: true,
-    totalRecipes: 0,
-  });
+  const [isBackendConnected, setIsBackendConnected] = useState(true);
 
   // ============================================================================
   // EFFECTS
   // ============================================================================
   
   /**
-   * Check backend health on app load
-   * Verifies the Python API is running and accessible
+   * Check backend connectivity on mount
    */
-  useEffect(() => {
-    const verifyBackend = async () => {
+  React.useEffect(() => {
+    const checkBackend = async () => {
       try {
-        const status = await checkHealth();
-        setBackendStatus({
-          isConnected: true,
-          isChecking: false,
-          totalRecipes: status.total_recipes || 0,
-        });
+        const response = await fetch('http://localhost:8000/');
+        setIsBackendConnected(response.ok);
       } catch (error) {
-        console.error('Backend health check failed:', error);
-        setBackendStatus({
-          isConnected: false,
-          isChecking: false,
-          totalRecipes: 0,
-        });
+        setIsBackendConnected(false);
+        console.error('Backend connection failed:', error);
       }
     };
 
-    verifyBackend();
+    checkBackend();
+    
+    // Check periodically
+    const interval = setInterval(checkBackend, 30000); // Every 30 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
   // ============================================================================
@@ -76,7 +72,6 @@ function App() {
   
   /**
    * Render the appropriate view based on active tab
-   * Similar to Fragment transaction in Android or view controller in iOS
    */
   const renderActiveView = () => {
     switch (activeTab) {
@@ -98,53 +93,45 @@ function App() {
   // ============================================================================
   
   return (
-    <div className="app mobile-layout">
-      {/* Top App Bar */}
-      <header className="app-bar">
-        <div className="app-bar-content">
-          <div className="app-bar-title">
-            <Utensils size={28} />
-            <h1>CookNook</h1>
+    <AuthProvider>
+      <div className="app">
+        {/* App Header */}
+        <header className="app-header">
+          <div className="header-content">
+            <h1 className="app-title">
+              <span className="logo-icon">🍳</span>
+              CookNook
+            </h1>
+            
+            {/* Backend Status Indicator */}
+            <div className="header-status">
+              {isBackendConnected ? (
+                <div className="status-indicator online">
+                  <Wifi size={18} />
+                  <span className="status-text">Online</span>
+                </div>
+              ) : (
+                <div className="status-indicator offline">
+                  <WifiOff size={18} />
+                  <span className="status-text">Offline</span>
+                </div>
+              )}
+            </div>
           </div>
-          
-          {/* Connection Status Indicator */}
-          <div className="connection-status">
-            {backendStatus.isChecking ? (
-              <div className="status-indicator checking">
-                <Wifi size={16} className="pulse" />
-              </div>
-            ) : backendStatus.isConnected ? (
-              <div className="status-indicator connected" title={`${backendStatus.totalRecipes.toLocaleString()} recipes`}>
-                <Wifi size={16} />
-              </div>
-            ) : (
-              <div className="status-indicator disconnected" title="Backend offline">
-                <WifiOff size={16} />
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Connection Warning Banner (only if disconnected) */}
-        {!backendStatus.isChecking && !backendStatus.isConnected && (
-          <div className="connection-banner">
-            <AlertCircle size={16} />
-            <span>Backend offline. Start server on port 8000.</span>
-          </div>
-        )}
-      </header>
+        </header>
 
-      {/* Main Content Area - Fragment Container */}
-      <main className="app-content">
-        {renderActiveView()}
-      </main>
+        {/* Main Content Area */}
+        <main className="app-main">
+          {renderActiveView()}
+        </main>
 
-      {/* Bottom Navigation */}
-      <BottomNav 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-    </div>
+        {/* Bottom Navigation */}
+        <BottomNav 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+        />
+      </div>
+    </AuthProvider>
   );
 }
 

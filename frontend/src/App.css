@@ -914,3 +914,569 @@ body {
     padding: var(--spacing-md);
   }
 }
+
+/*Maybe add to its own css file, like auth.css to keep things organized*/
+/* ============================================================================
+   AUTHENTICATION STYLES
+   ============================================================================ */
+
+/* Auth View Container */
+.auth-view {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 180px);
+  padding: 2rem 1rem;
+}
+
+/* Auth Form Container */
+.auth-form-container {
+  width: 100%;
+  max-width: 420px;
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Auth Form Header */
+.auth-form-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.auth-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.auth-form-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.auth-form-header p {
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+/* Auth Form */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Auth Error Message */
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
+/* Field Error */
+.field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+}
+
+.form-input.error {
+  border-color: #dc2626;
+}
+
+.form-input.error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Auth Footer */
+.auth-footer {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.auth-link:hover:not(:disabled) {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+.auth-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Auth Loading State */
+.auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 1rem;
+}
+
+/* ============================================================================
+   ACCOUNT VIEW STYLES
+   ============================================================================ */
+
+.account-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Account Cards */
+.account-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.account-card-header svg {
+  color: #667eea;
+}
+
+.account-card-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Profile Card */
+.profile-card .account-card-header {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.profile-info h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.profile-email {
+  color: #6b7280;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-meta {
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
+/* Preferences Card */
+.preferences-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.preference-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.preference-section h4 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.preference-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.preference-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  gap: 0.5rem;
+}
+
+.preference-name {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.preference-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.preference-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.preference-tag {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+/* History Card */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.history-item {
+  padding: 0.875rem;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.history-query {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.375rem;
+}
+
+.history-query strong {
+  color: #1f2937;
+}
+
+.history-filter {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background: #e0e7ff;
+  color: #4338ca;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+/* Settings Card */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background: #f9fafb;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  text-align: left;
+}
+
+.settings-item:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.settings-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-note {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Card Loading/Empty States */
+.card-loading,
+.card-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.card-loading .spinner {
+  margin-bottom: 1rem;
+}
+
+.card-empty p {
+  margin: 0;
+}
+
+/* ============================================================================
+   RECIPES VIEW UPDATES
+   ============================================================================ */
+
+/* View Mode Selector */
+.view-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem;
+  background: #f3f4f6;
+  border-radius: 10px;
+}
+
+.view-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-mode-btn:hover {
+  color: #374151;
+}
+
+.view-mode-btn.active {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Search Mode Selector */
+.search-mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.search-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-mode-option:hover {
+  border-color: #cbd5e1;
+  background: #f9fafb;
+}
+
+.search-mode-option input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+.search-mode-option input[type="radio"]:checked + .search-mode-label {
+  color: #667eea;
+}
+
+.search-mode-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  flex: 1;
+}
+
+.search-mode-desc {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-left: auto;
+}
+
+/* Recommendations Container */
+.recommendations-container {
+  padding: 0;
+}
+
+.recommendations-header {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+}
+
+.recommendations-header svg {
+  margin-bottom: 1rem;
+}
+
+.recommendations-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.recommendations-header p {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+/* ============================================================================
+   BUTTON UPDATES
+   ============================================================================ */
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 640px) {
+  .auth-form-container {
+    padding: 1.5rem;
+  }
+
+  .preference-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .search-mode-selector {
+    padding: 0.75rem;
+  }
+
+  .search-mode-desc {
+    display: none;
+  }
+}
