@@ -407,6 +407,41 @@ async def get_current_user_info(current_user: User = Depends(require_user)):
 # RECIPE SEARCH ENDPOINTS
 # ============================================================================
 
+@app.get("/cuisines", response_model=List[str], tags=["Recipes"])
+async def get_cuisines():
+    """
+    Get list of available cuisine types
+    
+    Returns the list of cuisine categories available for filtering.
+    Used to populate the cuisine dropdown in the search form.
+    
+    Returns:
+        List[str]: List of cuisine type strings
+    
+    Example Response:
+        ["italian", "mexican", "chinese", "indian", "american", ...]
+    """
+    cuisines = [
+        "american",
+        "asian",
+        "cajun_creole",
+        "chinese",
+        "french",
+        "greek",
+        "indian",
+        "italian",
+        "japanese",
+        "korean",
+        "mediterranean",
+        "mexican",
+        "middle_eastern",
+        "southern_us",
+        "thai",
+        "vietnamese"
+    ]
+    return cuisines
+
+
 @app.post("/search", response_model=List[SearchResponse], tags=["Recipes"])
 async def search_recipes(
     request: SearchRequest,
