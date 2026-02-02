@@ -135,6 +135,17 @@ def analyze_user_preferences(user_id: int, db: Session) -> UserPreferences:
     cuisine_counter = Counter(cuisines)
     favorite_cuisines = cuisine_counter.most_common(10)  # Top 10 cuisines
     
+    # Also analyze query text to find food-related keywords
+    # This helps when users don't use cuisine filters
+    query_words = []
+    for h in history:
+        if h.query:
+            # Extract words from queries (simple tokenization)
+            words = h.query.lower().split()
+            # Filter out very common words
+            stopwords = {'the', 'a', 'an', 'with', 'for', 'quick', 'easy', 'simple', 'best', 'good'}
+            query_words.extend([w for w in words if w not in stopwords and len(w) > 2])
+    
     # Count ingredient preferences
     all_ingredients = []
     for h in history:
@@ -142,6 +153,9 @@ def analyze_user_preferences(user_id: int, db: Session) -> UserPreferences:
             # Split comma-separated ingredients
             ingredients = [ing.strip() for ing in h.ingredients.split(',')]
             all_ingredients.extend(ingredients)
+    
+    # Add query words to ingredients (they're food-related terms)
+    all_ingredients.extend(query_words)
     
     ingredient_counter = Counter(all_ingredients)
     favorite_ingredients = ingredient_counter.most_common(20)  # Top 20 ingredients
@@ -373,15 +387,31 @@ def generate_recommendations(
     # Build synthetic search from preferences
     from models import SearchRequest
     
-    # Use top cuisine as query
-    query = ""
+    # Build a better query from user's search patterns
+    query_parts = []
+    
+    # Use top cuisine if available
     cuisine_filter = None
     if preferences.favorite_cuisines:
         top_cuisine = preferences.favorite_cuisines[0][0]
         cuisine_filter = top_cuisine
-        query = f"{top_cuisine} cuisine"
+        # Don't just say "italian cuisine" - that's too generic
     
-    # Use top ingredients
+    # Use top ingredients as the main query (these are more specific)
+    if preferences.favorite_ingredients:
+        # Use top 3 ingredients to build a more specific query
+        top_3_ingredients = [ing for ing, _ in preferences.favorite_ingredients[:3]]
+        query_parts.extend(top_3_ingredients)
+    
+    # If we have a cuisine but no ingredients, use cuisine
+    if cuisine_filter and not query_parts:
+        query_parts.append(cuisine_filter)
+    
+    # Combine into a search query
+    # Example: "pasta tomatoes garlic" instead of "italian cuisine"
+    query = " ".join(query_parts) if query_parts else ""
+    
+    # Use top ingredients for filtering
     ingredients = []
     if preferences.favorite_ingredients:
         ingredients = [ing for ing, _ in preferences.favorite_ingredients[:5]]
@@ -390,6 +420,8 @@ def generate_recommendations(
     max_time = None
     if preferences.avg_time_preference:
         max_time = int(preferences.avg_time_preference * 1.2)  # 20% buffer
+    
+    logger.info(f"Recommendation query for user {user_id}: '{query}' (cuisine={cuisine_filter}, ingredients={ingredients[:3]})")
     
     # Create search request
     search_request = SearchRequest(

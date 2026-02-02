@@ -65,7 +65,7 @@ apiClient.interceptors.response.use(
  * 
  * @example
  * const status = await checkHealth();
- * console.log(`Server has ${status.total_recipes} recipes`);
+ * console.log(`Server has ${status.recipe_count} recipes`);
  */
 export const checkHealth = async () => {
   const response = await apiClient.get('/');
@@ -151,11 +151,11 @@ export const searchRecipes = async ({
  * 
  * @example
  * const cuisines = await getCuisines();
- * // ["brazilian", "chinese", "french", "indian", "italian", ...]
+ * // ["american", "asian", "chinese", "french", "indian", "italian", ...]
  */
 export const getCuisines = async () => {
   const response = await apiClient.get('/cuisines');
-  return response.data.cuisines;
+  return response.data; // Backend returns array directly: ["italian", "mexican", ...]
 };
 
 /**
