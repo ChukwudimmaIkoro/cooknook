@@ -867,25 +867,70 @@ async def search_recipes_personalized(
         - personalization_boost: Multiplier applied
     """
     try:
-        # Execute regular search
-        results = search_engine.search(request)
+        # Get user preferences FIRST
+        preferences = analyze_user_preferences(current_user.id, db)
         
-        # Track search history
+        # Modify the search request to include preferences
+        enhanced_request = SearchRequest(
+            query=request.query,
+            ingredients=request.ingredients,
+            cuisine=request.cuisine,
+            max_time=request.max_time,
+            max_results=request.max_results
+        )
+        
+        # If user has preferences, enhance the query
+        if preferences.total_searches > 0:
+            # Build enhanced query with preferences
+            query_parts = []
+            
+            # Start with original query
+            if request.query:
+                query_parts.append(request.query)
+            
+            # Add top cuisine to query if not already filtered by cuisine
+            if preferences.favorite_cuisines and not request.cuisine:
+                top_cuisine = preferences.favorite_cuisines[0][0]
+                query_parts.append(top_cuisine)
+                logger.info(f"Enhanced query with cuisine: {top_cuisine}")
+            
+            # Add top ingredients to query
+            if preferences.favorite_ingredients:
+                top_ingredients = [ing for ing, _ in preferences.favorite_ingredients[:2]]
+                query_parts.extend(top_ingredients)
+                logger.info(f"Enhanced query with ingredients: {top_ingredients}")
+            
+            # Combine enhanced query
+            enhanced_query = " ".join(query_parts)
+            enhanced_request = SearchRequest(
+                query=enhanced_query,
+                ingredients=request.ingredients,
+                cuisine=request.cuisine or (preferences.favorite_cuisines[0][0] if preferences.favorite_cuisines else None),
+                max_time=request.max_time,
+                max_results=request.max_results * 2  # Get more results to re-rank
+            )
+            
+            logger.info(f"Personalized search enhanced: '{request.query}' → '{enhanced_query}'")
+        
+        # Execute search with enhanced query
+        results = search_engine.search(enhanced_request)
+        
+        # Track search history (track ORIGINAL query, not enhanced)
         try:
             track_search_history(
                 db=db,
                 user_id=current_user.id,
-                request=request,
+                request=request,  # Track original query
                 results=results
             )
         except Exception as e:
             logger.error(f"Failed to track search history: {str(e)}")
         
-        # Get user preferences
-        preferences = analyze_user_preferences(current_user.id, db)
-        
-        # Apply personalization
+        # Apply personalization boost to re-rank results
         personalized_results = personalize_search_results(results, preferences)
+        
+        # Return requested number of results
+        personalized_results = personalized_results[:request.max_results]
         
         logger.info(f"Personalized search: '{request.query}' (user={current_user.username}) - {len(personalized_results)} results")
         

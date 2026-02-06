@@ -240,11 +240,11 @@ def calculate_personalization_boost(
         if recipe.cuisine in cuisine_ranks:
             rank = cuisine_ranks[recipe.cuisine]
             if rank == 0:
-                boost *= 1.3  # Top favorite cuisine
+                boost *= 2.0  # Top favorite cuisine (was 1.3)
             elif rank <= 2:
-                boost *= 1.2  # 2nd-3rd favorite
+                boost *= 1.5  # 2nd-3rd favorite (was 1.2)
             elif rank <= 4:
-                boost *= 1.1  # 4th-5th favorite
+                boost *= 1.3  # 4th-5th favorite (was 1.1)
     
     # Ingredient preference boost
     if preferences.favorite_ingredients:
