@@ -1,50 +1,32 @@
 /**
- * api.js - API Service Layer
- * 
- * This module handles all communication with the Python FastAPI backend.
- * It provides a clean interface for making API calls without cluttering
- * component code with fetch logic.
- * 
- * Key Features:
- * - Centralized API configuration
- * - Error handling
- * - Request/response transformation
- * - Type documentation via JSDoc
+ * Handles communication with Python FastAPI backend.
+ * Makes API calls without cluttered fetch logic.
+ * Error handling, request/response transformation, and type documentation.
  */
 
 import axios from 'axios';
 
-/**
- * Base URL for the API backend
- * Update this if your backend runs on a different host/port
- * Default: http://localhost:8000
- */
+//TODO: Run on different port later?
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-/**
- * Create an axios instance with default configuration
- * This allows us to set common headers and handle errors globally
- */
+//Create axios instance to handle requests and responses
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  // Timeout after 30 seconds (first search can be slow due to model warmup)
+  // First search slow due to long load, fix?
   timeout: 30000,
 });
 
-/**
- * Add a response interceptor for global error handling
- * This catches network errors and API errors in one place
- */
+//Response interceptor for global error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Log error for debugging
+    // Log error for debugging and display to user
     console.error('API Error:', error.response?.data || error.message);
     
-    // Throw a more user-friendly error message
+    // Throw a more user-friendly error message to display to user
     const message = error.response?.data?.detail || 
                    error.message || 
                    'An unexpected error occurred';
@@ -52,68 +34,15 @@ apiClient.interceptors.response.use(
   }
 );
 
-/**
- * Check if the backend API is healthy and responding
- * 
- * This is useful for:
- * - Verifying backend is running
- * - Displaying connection status in UI
- * - Debugging connection issues
- * 
- * @returns {Promise<Object>} Server status information
- * @throws {Error} If server is unreachable or unhealthy
- * 
- * @example
- * const status = await checkHealth();
- * console.log(`Server has ${status.recipe_count} recipes`);
- */
+//Check API status
 export const checkHealth = async () => {
+  //TODO: Change to cloud server later
   const response = await apiClient.get('/');
   return response.data;
 };
 
-/**
- * Search for recipes based on user preferences
- * 
- * This is the main API call that powers the recipe recommendation engine.
- * It sends user preferences to the backend and receives ranked recipe results.
- * 
- * @param {Object} searchParams - Search parameters
- * @param {string} [searchParams.query=''] - Natural language query (e.g., "quick dinner")
- * @param {string[]} [searchParams.ingredients=[]] - List of available ingredients
- * @param {string} [searchParams.cuisine=null] - Filter by cuisine type (e.g., "italian")
- * @param {number} [searchParams.maxTime=null] - Maximum cooking time in minutes
- * @param {number} [searchParams.maxResults=10] - Maximum number of results to return
- * 
- * @returns {Promise<Object[]>} Array of recipe results with similarity scores
- * @throws {Error} If search fails or backend is unavailable
- * 
- * @example
- * const results = await searchRecipes({
- *   query: "spicy dinner",
- *   ingredients: ["chicken", "rice"],
- *   cuisine: "indian",
- *   maxTime: 60,
- *   maxResults: 5
- * });
- * 
- * Response format:
- * [
- *   {
- *     id: 137739,
- *     name: "Classic Spaghetti Carbonara",
- *     cuisine: "italian",
- *     ingredients: ["pasta", "eggs", "bacon", "parmesan"],
- *     similarity_score: 0.89,
- *     matching_ingredients: ["eggs"],
- *     missing_ingredients: ["pasta", "bacon", "parmesan"],
- *     minutes: 30,
- *     n_steps: 8,
- *     description: "A classic Italian pasta dish..."
- *   },
- *   ...
- * ]
- */
+
+//Search for recipes based on user preferences and returns ranked results
 export const searchRecipes = async ({
   query = '',
   ingredients = [],
@@ -121,8 +50,7 @@ export const searchRecipes = async ({
   maxTime = null,
   maxResults = 10,
 }) => {
-  // Construct request body
-  // Note: We use snake_case for backend compatibility (Python convention)
+  //Create request body, using snake_case for Python backend compatibility
   const requestBody = {
     query,
     ingredients,
@@ -131,87 +59,34 @@ export const searchRecipes = async ({
     max_results: maxResults,
   };
 
-  // Make POST request to search endpoint
+  //POST request to /search endpoint
   const response = await apiClient.post('/search', requestBody);
   
-  // Return the recipe array from response
+  //Return the recipe array from response
   return response.data;
 };
 
-/**
- * Get list of all available cuisines in the dataset
- * 
- * Useful for:
- * - Populating cuisine filter dropdown
- * - Showing users what options are available
- * - Autocomplete functionality
- * 
- * @returns {Promise<string[]>} Sorted array of cuisine names
- * @throws {Error} If request fails
- * 
- * @example
- * const cuisines = await getCuisines();
- * // ["american", "asian", "chinese", "french", "indian", "italian", ...]
- */
+
+//Return list of all available cuisines in the dataset
 export const getCuisines = async () => {
   const response = await apiClient.get('/cuisines');
-  return response.data; // Backend returns array directly: ["italian", "mexican", ...]
+  return response.data;
 };
 
-/**
- * Get statistical information about the recipe dataset
- * 
- * Provides insights into:
- * - Total number of recipes
- * - Number of cuisines
- * - Distribution of recipes across cuisines
- * - Unique ingredient count
- * 
- * @returns {Promise<Object>} Dataset statistics
- * @throws {Error} If request fails
- * 
- * @example
- * const stats = await getStats();
- * console.log(`Dataset contains ${stats.total_recipes} recipes`);
- * console.log(`Top cuisine: ${Object.keys(stats.cuisine_distribution)[0]}`);
- * 
- * Response format:
- * {
- *   total_recipes: 39774,
- *   total_cuisines: 20,
- *   cuisine_distribution: { italian: 7838, mexican: 6438, ... },
- *   unique_ingredients: 6714
- * }
- */
+//Returns recipe dataset stats, like total recipes, cuisines, and ingredients
 export const getStats = async () => {
   const response = await apiClient.get('/stats');
   return response.data;
 };
 
-/**
- * Helper function to parse ingredient input
- * Converts comma-separated string to array of trimmed ingredients
- * 
- * @param {string} ingredientsString - Comma-separated ingredients
- * @returns {string[]} Array of ingredient names
- * 
- * @example
- * parseIngredients("tomatoes, onions, garlic")
- * // Returns: ["tomatoes", "onions", "garlic"]
- * 
- * parseIngredients("  chicken  ,  rice  ")
- * // Returns: ["chicken", "rice"]
- */
+//Helper function to parse ingredient input
+//Split by comma, remove whitespace, and remove empty strings
 export const parseIngredients = (ingredientsString) => {
   if (!ingredientsString || ingredientsString.trim() === '') {
     return [];
   }
   
-  return ingredientsString
-    .split(',')                    // Split by comma
-    .map(ing => ing.trim())        // Remove whitespace from each ingredient
-    .filter(ing => ing.length > 0); // Remove empty strings
+  return ingredientsString.split(',').map(ing => ing.trim()).filter(ing => ing.length > 0); 
 };
 
-// Export the API client for advanced use cases
 export default apiClient;
