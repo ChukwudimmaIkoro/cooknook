@@ -16,6 +16,7 @@ import RecipesView from './views/RecipesView';
 import SavedView from './views/SavedView';
 import AccountView from './views/AccountView';
 import { Wifi, WifiOff } from 'lucide-react';
+import NotificationBell from './components/NotificationBell';
 import './App.css';
 
 /**
@@ -103,6 +104,9 @@ function App() {
               CookNook
             </h1>
             
+            {/* Notification Bell */}
+            <NotificationBell />
+
             {/* Backend Status Indicator */}
             <div className="header-status">
               {isBackendConnected ? (

@@ -89,4 +89,77 @@ export const parseIngredients = (ingredientsString) => {
   return ingredientsString.split(',').map(ing => ing.trim()).filter(ing => ing.length > 0); 
 };
 
+// ============================================================================
+// PANTRY API
+// ============================================================================
+
+export const getPantryItems = async (token) => {
+  const response = await apiClient.get('/pantry/items', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const addPantryItem = async (token, itemData) => {
+  const response = await apiClient.post('/pantry/items', itemData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const updatePantryItem = async (token, itemId, updates) => {
+  const response = await apiClient.put(`/pantry/items/${itemId}`, updates, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const deletePantryItem = async (token, itemId) => {
+  const response = await apiClient.delete(`/pantry/items/${itemId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const searchByPantry = async (token, maxResults = 10) => {
+  const response = await apiClient.post(
+    '/pantry/search',
+    { max_results: maxResults },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return response.data;
+};
+
+// ============================================================================
+// NOTIFICATIONS API
+// ============================================================================
+
+export const getNotifications = async (token) => {
+  const response = await apiClient.get('/notifications', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const markNotificationRead = async (token, notificationId) => {
+  const response = await apiClient.put(`/notifications/${notificationId}/read`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const markAllNotificationsRead = async (token) => {
+  const response = await apiClient.post('/notifications/read-all', {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const dismissNotification = async (token, notificationId) => {
+  const response = await apiClient.delete(`/notifications/${notificationId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
 export default apiClient;

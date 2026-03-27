@@ -117,33 +117,60 @@ class RecipeInteraction(Base):
     # Relationships
     user = relationship("User", back_populates="interactions")
 
-
 class PantryItem(Base):
-    """
-    User's virtual pantry - ingredients they have
-    
-    Used for smart recommendations and expiration tracking
-    """
     __tablename__ = "pantry_items"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     
-    # Item details
     ingredient_name = Column(String, nullable=False, index=True)
     quantity = Column(Float, nullable=True)
-    unit = Column(String, nullable=True)  # cups, lbs, etc.
-    
-    # Tracking
-    added_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=True)
-    last_used_at = Column(DateTime, nullable=True)
-    
-    # Status
-    is_running_low = Column(Boolean, default=False)
-    
-    # Relationships
+    unit = Column(String, nullable=True)
+    added_date = Column(DateTime, default=datetime.utcnow)      # ← was added_at
+    expiration_date = Column(DateTime, nullable=True)            # ← was expires_at
+    category = Column(String, nullable=True)                     # ← missing
+    notes = Column(Text, nullable=True)                          # ← missing
+
     user = relationship("User", back_populates="pantry_items")
+
+# class PantryItem(Base):
+#     """
+#     User's virtual pantry - ingredients they have
+    
+#     Used for smart recommendations and expiration tracking
+#     """
+#     __tablename__ = "pantry_items"
+    
+#     id = Column(Integer, primary_key=True, index=True)
+#     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    
+#     # Item details
+#     ingredient_name = Column(String, nullable=False, index=True)
+#     quantity = Column(Float, nullable=True)
+#     unit = Column(String, nullable=True)  # cups, lbs, etc.
+    
+#     # Tracking
+#     added_at = Column(DateTime, default=datetime.utcnow)
+#     expires_at = Column(DateTime, nullable=True)
+#     last_used_at = Column(DateTime, nullable=True)
+    
+#     # Status
+#     is_running_low = Column(Boolean, default=False)
+    
+#     # Relationships
+#     user = relationship("User", back_populates="pantry_items")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+ 
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type       = Column(String, nullable=False)   # "expiration" | "shopping" | "recipe_suggestion"
+    title      = Column(String, nullable=False)
+    message    = Column(Text,   nullable=False)
+    action_url = Column(String, nullable=True)    # e.g. "/recipes/12345"
+    read       = Column(Boolean, default=False,   nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # ============================================================================
