@@ -2,12 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   ShoppingBasket, Plus, Trash2, Edit2, Check, X,
-  ChefHat, AlertTriangle, RefreshCw,
+  ChefHat, AlertTriangle, RefreshCw, Bookmark, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import {
   getPantryItems, addPantryItem, updatePantryItem,
   deletePantryItem, searchByPantry,
 } from '../services/api';
+import { saveRecipe, unsaveRecipe, isRecipeSaved } from './SavedView';
 
 // ── Expiration badge ─────────────────────────────────────────────────────────
 // FIX: thresholds — green until 7d, orange 7-3d, red <3d
@@ -64,21 +65,44 @@ const PantryItemCard = ({ item, onDelete, onUpdate }) => {
   );
 };
 
-// ── Recipe result card with ingredient matching ──────────────────────────────
-// FIX: case-insensitive matching, green checkmark boxes, coverage %
-const PantryRecipeCard = ({ recipe, pantrySet }) => {
+// ── Recipe result card with ingredient matching, steps, and save ─────────────
+const PantryRecipeCard = ({ recipe, pantrySet, user }) => {
   const pct = Math.round(recipe.coverage * 100);
+  const [showSteps, setShowSteps] = useState(false);
+  const [bookmarked, setBookmarked] = useState(
+    user ? isRecipeSaved(user.id, recipe.id) : false
+  );
 
-  // Re-derive per-ingredient status from live pantrySet (case-insensitive)
+  const handleBookmark = () => {
+    if (!user) return;
+    if (bookmarked) {
+      unsaveRecipe(user.id, recipe.id);
+    } else {
+      saveRecipe(user.id, recipe);
+    }
+    setBookmarked(!bookmarked);
+  };
+
   const ingredients = recipe.ingredients || [];
-  const matched   = new Set(recipe.matched_ingredients.map(i => i.toLowerCase()));
-  const expiring  = new Set(recipe.uses_expiring_soon.map(i => i.toLowerCase()));
+  const matched  = new Set(recipe.matched_ingredients.map(i => i.toLowerCase()));
+  const expiring = new Set(recipe.uses_expiring_soon.map(i => i.toLowerCase()));
 
   return (
     <div className="pantry-recipe-card">
       <div className="pantry-recipe-header">
         <span className="pantry-recipe-name">{recipe.name}</span>
-        <span className="pantry-coverage-badge">{pct}% covered</span>
+        <div className="pantry-recipe-header-right">
+          <span className="pantry-coverage-badge">{pct}% covered</span>
+          {user && (
+            <button
+              className={`icon-btn ${bookmarked ? 'bookmark-active' : 'bookmark-btn'}`}
+              onClick={handleBookmark}
+              title={bookmarked ? 'Remove from saved' : 'Save recipe'}
+            >
+              <Bookmark size={16} fill={bookmarked ? 'currentColor' : 'none'}/>
+            </button>
+          )}
+        </div>
       </div>
 
       {recipe.uses_expiring_soon.length > 0 && (
@@ -88,17 +112,14 @@ const PantryRecipeCard = ({ recipe, pantrySet }) => {
         </p>
       )}
 
-      {/* Ingredient list with have/need indicators */}
       <div className="pantry-recipe-ingredients">
         {ingredients.slice(0, 10).map((ing, i) => {
-          const norm  = ing.toLowerCase().trim();
-          const have  = matched.has(norm);
-          const soon  = expiring.has(norm);
+          const norm = ing.toLowerCase().trim();
+          const have = matched.has(norm);
+          const soon = expiring.has(norm);
           return (
             <span key={i} className={`ingredient-chip ${have ? (soon ? 'chip-expiring' : 'chip-have') : 'chip-need'}`}>
-              {have
-                ? <Check size={11} style={{marginRight:3}}/>
-                : <X size={11} style={{marginRight:3}}/>}
+              {have ? <Check size={11} style={{marginRight:3}}/> : <X size={11} style={{marginRight:3}}/>}
               {ing}
             </span>
           );
@@ -114,6 +135,25 @@ const PantryRecipeCard = ({ recipe, pantrySet }) => {
           {recipe.missing_ingredients.length > 4 ? ` +${recipe.missing_ingredients.length - 4} more` : ''}
         </p>
       )}
+
+      {recipe.steps && recipe.steps.length > 0 && (
+        <div className="recipe-instructions">
+          <button className="instructions-toggle" onClick={() => setShowSteps(v => !v)}>
+            <span>Cooking Instructions ({recipe.steps.length} steps)</span>
+            {showSteps ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
+          </button>
+          {showSteps && (
+            <ol className="instructions-list">
+              {recipe.steps.map((step, i) => (
+                <li key={i} className="instruction-step">
+                  <span className="step-number">{i + 1}</span>
+                  <span className="step-text">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -122,7 +162,7 @@ const PantryRecipeCard = ({ recipe, pantrySet }) => {
 const CATEGORIES = ['produce','dairy','meat','seafood','pantry','frozen','drinks','other'];
 
 const PantryView = () => {
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, user } = useAuth();
 
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -292,6 +332,21 @@ const PantryView = () => {
         </div>
       )}
 
+      {items.length > 0 && (
+        <div className="pantry-search-banner">
+          <div className="pantry-search-banner-text">
+            <ChefHat size={28}/>
+            <div>
+              <p className="pantry-search-banner-title">What can I cook?</p>
+              <p className="pantry-search-banner-subtitle">Find recipes using what's in your pantry</p>
+            </div>
+          </div>
+          <button className="btn btn-find-recipes" onClick={handlePantrySearch} disabled={searching}>
+            {searching ? 'Finding recipes…' : 'Search Recipes'}
+          </button>
+        </div>
+      )}
+
       {Object.entries(grouped).map(([cat, catItems]) => (
         <div key={cat} className="pantry-category-group">
           <h4 className="pantry-category-label">
@@ -305,13 +360,6 @@ const PantryView = () => {
         </div>
       ))}
 
-      {items.length > 0 && (
-        <button className="btn btn-find-recipes" onClick={handlePantrySearch} disabled={searching}>
-          <ChefHat size={20}/>
-          {searching ? 'Finding recipes…' : 'Find Recipes with My Pantry'}
-        </button>
-      )}
-
       {showRecipes && (
         <div className="pantry-recipes-section">
           <h3 className="section-title">Recipes You Can Make</h3>
@@ -321,7 +369,7 @@ const PantryView = () => {
             <p className="muted-text">No matching recipes found.</p>
           )}
           {recipes.map(r => (
-            <PantryRecipeCard key={r.id} recipe={r} pantrySet={pantrySet}/>
+            <PantryRecipeCard key={r.id} recipe={r} pantrySet={pantrySet} user={user}/>
           ))}
         </div>
       )}

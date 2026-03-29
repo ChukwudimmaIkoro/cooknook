@@ -201,20 +201,20 @@ class PantrySearchRequest(BaseModel):
      
 class PantrySearchResult(BaseModel):
     """A recipe result with pantry-specific scoring fields appended."""
-    # Standard recipe fields (mirrors your existing RecipeResult model)
     id: int
     name: str
-    ingredients: list[str]
+    ingredients: List[str]
     cuisine: Optional[str]
     minutes: Optional[int]
+    steps: Optional[List[str]] = None
+    n_steps: Optional[int] = None
     similarity_score: float
- 
-    # Pantry-specific fields
-    pantry_score: float          # Combined ranking score (0.0 – 1.0+)
-    coverage: float              # Fraction of recipe ingredients in pantry (0.0 – 1.0)
-    matched_ingredients: list[str]   # Pantry items this recipe uses
-    missing_ingredients: list[str]   # What you'd still need to buy
-    uses_expiring_soon: list[str]    # Matched items expiring within 3 days (urgency bonus)
+
+    pantry_score: float
+    coverage: float
+    matched_ingredients: List[str]
+    missing_ingredients: List[str]
+    uses_expiring_soon: List[str]
 
 class NotificationResponse(BaseModel):
     id: int

@@ -13,17 +13,18 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Login from '../components/Login';
 import Register from '../components/Register';
-import { 
+import {
   User, LogOut, TrendingUp, Clock, Heart, Settings,
   ChevronRight, Loader2, RefreshCw
 } from 'lucide-react';
+import { getPreferences, getHistory, clearHistory as apiClearHistory } from '../services/api';
 
 const AccountView = () => {
   // ============================================================================
   // HOOKS
   // ============================================================================
   
-  const { user, isAuthenticated, logout, getAuthHeaders } = useAuth();
+  const { user, isAuthenticated, logout, token } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -88,14 +89,8 @@ const AccountView = () => {
   const loadPreferences = async () => {
     setLoadingPreferences(true);
     try {
-      const response = await fetch('http://localhost:8000/preferences', {
-        headers: getAuthHeaders(),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPreferences(data);
-      }
+      const data = await getPreferences(token);
+      setPreferences(data);
     } catch (error) {
       console.error('Failed to load preferences:', error);
     } finally {
@@ -109,14 +104,8 @@ const AccountView = () => {
   const loadHistory = async () => {
     setLoadingHistory(true);
     try {
-      const response = await fetch('http://localhost:8000/history?limit=10', {
-        headers: getAuthHeaders(),
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setHistory(data);
-      }
+      const data = await getHistory(token, 10);
+      setHistory(data);
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
@@ -133,16 +122,10 @@ const AccountView = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/history', {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-      });
-      
-      if (response.ok) {
-        setHistory([]);
-        loadPreferences(); // Reload preferences since they're based on history
-        alert('Search history cleared successfully');
-      }
+      await apiClearHistory(token);
+      setHistory([]);
+      loadPreferences();
+      alert('Search history cleared successfully');
     } catch (error) {
       console.error('Failed to clear history:', error);
       alert('Failed to clear history. Please try again.');

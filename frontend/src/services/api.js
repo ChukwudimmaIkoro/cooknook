@@ -36,8 +36,68 @@ apiClient.interceptors.response.use(
 
 //Check API status
 export const checkHealth = async () => {
-  //TODO: Change to cloud server later
   const response = await apiClient.get('/');
+  return response.data;
+};
+
+// ============================================================================
+// AUTH API
+// ============================================================================
+
+export const loginUser = async (username, password) => {
+  const response = await apiClient.post('/auth/login', { username, password });
+  return response.data;
+};
+
+export const registerUser = async (userData) => {
+  const response = await apiClient.post('/auth/register', userData);
+  return response.data;
+};
+
+// ============================================================================
+// PERSONALIZATION / HISTORY API
+// ============================================================================
+
+export const getPreferences = async (token) => {
+  const response = await apiClient.get('/preferences', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const getHistory = async (token, limit = 10) => {
+  const response = await apiClient.get(`/history?limit=${limit}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const clearHistory = async (token) => {
+  const response = await apiClient.delete('/history', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const getRecommendations = async (token, limit = 10) => {
+  const response = await apiClient.get(`/recommendations?limit=${limit}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const searchPersonalized = async (token, searchParams) => {
+  const response = await apiClient.post(
+    '/search/personalized',
+    {
+      query: searchParams.query,
+      ingredients: searchParams.ingredients,
+      cuisine: searchParams.cuisine,
+      max_time: searchParams.maxTime,
+      max_results: searchParams.maxResults,
+    },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
   return response.data;
 };
 

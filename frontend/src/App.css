@@ -1627,26 +1627,59 @@ body {
   gap: 3px;
 }
 
-/* ── Find recipes button ─────────────────────────────────────── */
+/* ── Find recipes banner ─────────────────────────────────────── */
+.pantry-search-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 2px solid #bbf7d0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.pantry-search-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #15803d;
+}
+
+.pantry-search-banner-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #14532d;
+  margin: 0 0 2px;
+}
+
+.pantry-search-banner-subtitle {
+  font-size: 0.85rem;
+  color: #16a34a;
+  margin: 0;
+}
+
 .btn-find-recipes {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
+  flex-shrink: 0;
+  padding: 12px 24px;
+  border-radius: 10px;
   background: #16a34a;
   color: white;
   border: none;
   cursor: pointer;
   font-weight: 700;
   font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
+  white-space: nowrap;
   transition: background 0.15s;
 }
 .btn-find-recipes:hover:not(:disabled) { background: #15803d; }
 .btn-find-recipes:disabled { background: #86efac; cursor: not-allowed; }
+
+@media (max-width: 480px) {
+  .pantry-search-banner { flex-direction: column; align-items: stretch; }
+  .btn-find-recipes { width: 100%; text-align: center; }
+}
 
 /* ── Pantry recipe results ───────────────────────────────────── */
 .pantry-recipes-section {
@@ -1666,6 +1699,13 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 8px;
+}
+
+.pantry-recipe-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .pantry-recipe-name {
@@ -1750,34 +1790,35 @@ body {
 }
 .notification-bell-btn:hover { background: rgba(0,0,0,0.07); }
 
-.notification-badge {
+.notification-dot {
   position: absolute;
-  top: 1px;
-  right: 1px;
-  background: #ef4444;
-  color: white;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  background: #eab308;
   border-radius: 50%;
-  width: 17px;
-  height: 17px;
-  font-size: 0.62rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 2px solid white;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.25); opacity: 0.8; }
 }
 
 .notification-dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  width: 320px;
-  max-height: 400px;
+  position: fixed;
+  right: 12px;
+  top: 56px;
+  width: min(320px, calc(100vw - 24px));
+  max-height: 420px;
   overflow-y: auto;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  z-index: 9999;
 }
 
 .notification-dropdown-header {

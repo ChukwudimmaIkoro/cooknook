@@ -56,12 +56,10 @@ const NotificationBell = () => {
 
   return (
     <div className="notification-bell-wrapper" ref={wrapperRef}>
-      <button className="notification-bell-btn" onClick={() => setOpen(v => !v)}
+      <button className="notification-bell-btn" onClick={() => { setOpen(v => !v); }}
         aria-label="Notifications">
         <Bell size={22}/>
-        {unread > 0 && (
-          <span className="notification-badge">{unread > 9 ? '9+' : unread}</span>
-        )}
+        {unread > 0 && <span className="notification-dot"/>}
       </button>
 
       {open && (

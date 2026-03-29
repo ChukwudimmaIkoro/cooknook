@@ -69,145 +69,6 @@ scheduler = BackgroundScheduler()
 
 
 # ============================================================================
-# PANTRY + NOTIFICATION HELPERS
-# ============================================================================
-
-def _days_until_expiration(expiration_date: Optional[datetime]) -> Optional[int]:
-    """Return days until expiry, 0 if already expired, None if no date set."""
-    if expiration_date is None:
-        return None
-    now = datetime.now(timezone.utc)
-    if expiration_date.tzinfo is None:
-        expiration_date = expiration_date.replace(tzinfo=timezone.utc)
-    return max((expiration_date - now).days, 0)
-
-
-def _to_pantry_response(item) -> dict:
-    """Convert PantryItem ORM object to response dict with computed fields."""
-    return {
-        "id": item.id,
-        "user_id": item.user_id,
-        "ingredient_name": item.ingredient_name,
-        "quantity": item.quantity,
-        "unit": item.unit,
-        "added_date": item.added_date,
-        "expiration_date": item.expiration_date,
-        "category": item.category,
-        "notes": item.notes,
-        "days_until_expiration": _days_until_expiration(item.expiration_date),
-    }
-
-
-def _get_expiring_soon(pantry_items, days_threshold: int = 3) -> set:
-    """Return set of ingredient names (lowercased) expiring within threshold days."""
-    now = datetime.now(timezone.utc)
-    expiring = set()
-    for item in pantry_items:
-        if item.expiration_date is None:
-            continue
-        exp = item.expiration_date
-        if exp.tzinfo is None:
-            exp = exp.replace(tzinfo=timezone.utc)
-        if (exp - now).days <= days_threshold:
-            expiring.add(item.ingredient_name.lower())
-    return expiring
-
-
-def _normalize(name: str) -> str:
-    return name.lower().strip()
-
-
-def _when_label(days: int) -> str:
-    if days <= 0:
-        return "today (already expired)"
-    if days == 1:
-        return "tomorrow"
-    return f"in {days} days"
-
-
-def generate_notifications(user_id: int, db: Session) -> list:
-    """
-    Rule-based notification generation.
-    Called by the background scheduler every 6 hours.
-    Returns a list of dicts ready to insert as Notification rows.
-    """
-    pantry_items = db.query(PantryItem).filter(PantryItem.user_id == user_id).all()
-    notifications = []
-    now = datetime.now(timezone.utc)
-
-    expiring = []
-    for item in pantry_items:
-        if item.expiration_date is None:
-            continue
-        exp = item.expiration_date
-        if exp.tzinfo is None:
-            exp = exp.replace(tzinfo=timezone.utc)
-        days_left = (exp - now).days
-        if days_left <= 2:
-            expiring.append((item, days_left))
-
-    if not expiring:
-        return []
-
-    # Find a recipe that uses expiring ingredients
-    expiring_names = [item.ingredient_name for item, _ in expiring]
-    search_query = " ".join(expiring_names[:3])
-    recipe_results = search_engine.search(query=search_query, max_results=1) if search_engine else []
-    recipe_name = recipe_results[0].name if recipe_results else "something delicious"
-    recipe_url  = f"/recipes/{recipe_results[0].id}" if recipe_results else None
-
-    if len(expiring) == 1:
-        item, days_left = expiring[0]
-        template = random.choice(NOTIFICATION_TEMPLATES["expiration_single"])
-        message = template.format(
-            ingredient=item.ingredient_name,
-            when=_when_label(days_left),
-            recipe=recipe_name,
-        )
-        notifications.append({
-            "user_id":    user_id,
-            "type":       "expiration",
-            "title":      f"{item.ingredient_name} expiring soon",
-            "message":    message,
-            "action_url": recipe_url,
-        })
-    else:
-        soonest_days = min(d for _, d in expiring)
-        template = random.choice(NOTIFICATION_TEMPLATES["expiration_multiple"])
-        message = template.format(
-            count=len(expiring),
-            when=_when_label(soonest_days),
-            recipe=recipe_name,
-        )
-        notifications.append({
-            "user_id":    user_id,
-            "type":       "expiration",
-            "title":      f"{len(expiring)} items expiring soon",
-            "message":    message,
-            "action_url": recipe_url,
-        })
-
-    return notifications
-
-
-def save_notifications(notifications: list, db: Session):
-    """Persist notifications, skipping duplicates (same unread title for same user)."""
-    for n in notifications:
-        exists = (
-            db.query(Notification)
-            .filter(
-                Notification.user_id == n["user_id"],
-                Notification.title   == n["title"],
-                Notification.read    == False,
-            )
-            .first()
-        )
-        if not exists:
-            db.add(Notification(**n))
-    db.commit()
-
-
-# ============================================================================
 # FASTAPI APP INITIALIZATION
 # ============================================================================
 
@@ -1234,7 +1095,7 @@ def generate_notifications(user_id: int, db: Session) -> list[dict]:
     # Find a recipe that uses the expiring ingredient(s)
     expiring_names = [item.ingredient_name for item, _ in expiring]
     search_query = " ".join(expiring_names[:3])
-    recipe_results = search_engine.search(query=search_query, max_results=1)
+    recipe_results = search_engine.search(SearchRequest(query=search_query, max_results=1)) if search_engine else []
     recipe_name = recipe_results[0].name if recipe_results else "something delicious"
     recipe_url  = f"/recipes/{recipe_results[0].id}" if recipe_results else None
  
@@ -1301,7 +1162,7 @@ def save_notifications(notifications: list[dict], db: Session):
 )
 def search_recipes_by_pantry(
     request: PantrySearchRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -1345,9 +1206,7 @@ def search_recipes_by_pantry(
     # 3. Run semantic search with a larger pool so scoring has room to re-rank
     candidate_pool = min(request.max_results * 5, 100)
     raw_results = search_engine.search(
-        query=search_query,
-        ingredients=list(pantry_set),
-        max_results=candidate_pool,
+        SearchRequest(query=search_query, ingredients=list(pantry_set), max_results=candidate_pool)
     )
  
     # 4. Score each candidate against the pantry
@@ -1365,6 +1224,8 @@ def search_recipes_by_pantry(
             "ingredients": recipe_ingredients,
             "cuisine": getattr(recipe, "cuisine", None),
             "minutes": getattr(recipe, "minutes", None),
+            "steps": getattr(recipe, "steps", None),
+            "n_steps": getattr(recipe, "n_steps", None),
             "similarity_score": round(recipe.similarity_score, 4),
             "pantry_score": pantry_score,
             "coverage": round(len(matched) / len(recipe_ingredients), 4) if recipe_ingredients else 0.0,

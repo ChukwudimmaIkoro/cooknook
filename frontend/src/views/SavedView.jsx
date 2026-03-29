@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, Heart, Trash2, ChefHat, Clock, Star } from 'lucide-react';
+import { Bookmark, Heart, Trash2, ChefHat, Clock, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 // Storage helpers — keyed per user so different accounts don't share saves
@@ -35,47 +35,71 @@ export const isRecipeSaved = (userId, recipeId) =>
   getSavedRecipes(userId).some(r => r.id === recipeId);
 
 // ── Saved recipe card ────────────────────────────────────────────────────────
-const SavedRecipeCard = ({ recipe, onUnsave, onToggleHeart }) => (
-  <div className={`saved-recipe-card ${recipe.hearted ? 'hearted' : ''}`}>
-    <div className="saved-recipe-main">
-      <div className="saved-recipe-info">
-        <div className="saved-recipe-title-row">
-          {recipe.hearted && <Heart size={14} className="heart-indicator" fill="currentColor"/>}
-          <span className="saved-recipe-name">{recipe.name}</span>
+const SavedRecipeCard = ({ recipe, onUnsave, onToggleHeart }) => {
+  const [showSteps, setShowSteps] = useState(false);
+
+  return (
+    <div className={`saved-recipe-card ${recipe.hearted ? 'hearted' : ''}`}>
+      <div className="saved-recipe-main">
+        <div className="saved-recipe-info">
+          <div className="saved-recipe-title-row">
+            {recipe.hearted && <Heart size={14} className="heart-indicator" fill="currentColor"/>}
+            <span className="saved-recipe-name">{recipe.name}</span>
+          </div>
+          <div className="saved-recipe-meta">
+            {recipe.minutes && (
+              <span className="meta-chip"><Clock size={12}/> {recipe.minutes}m</span>
+            )}
+            {recipe.cuisine && (
+              <span className="meta-chip"><ChefHat size={12}/> {recipe.cuisine}</span>
+            )}
+            {recipe.similarity_score && (
+              <span className="meta-chip"><Star size={12}/> {Math.round(recipe.similarity_score * 100)}% match</span>
+            )}
+          </div>
         </div>
-        <div className="saved-recipe-meta">
-          {recipe.minutes && (
-            <span className="meta-chip"><Clock size={12}/> {recipe.minutes}m</span>
-          )}
-          {recipe.cuisine && (
-            <span className="meta-chip"><ChefHat size={12}/> {recipe.cuisine}</span>
-          )}
-          {recipe.similarity_score && (
-            <span className="meta-chip"><Star size={12}/> {Math.round(recipe.similarity_score * 100)}% match</span>
-          )}
+        <div className="saved-recipe-actions">
+          <button
+            className={`icon-btn ${recipe.hearted ? 'hearted-btn' : 'heart-btn'}`}
+            onClick={onToggleHeart}
+            title={recipe.hearted ? 'Remove from favourites' : 'Add to favourites'}
+          >
+            <Heart size={18} fill={recipe.hearted ? 'currentColor' : 'none'}/>
+          </button>
+          <button className="icon-btn delete" onClick={onUnsave} title="Remove">
+            <Trash2 size={16}/>
+          </button>
         </div>
       </div>
-      <div className="saved-recipe-actions">
-        <button
-          className={`icon-btn ${recipe.hearted ? 'hearted-btn' : 'heart-btn'}`}
-          onClick={onToggleHeart}
-          title={recipe.hearted ? 'Remove from favourites' : 'Add to favourites'}
-        >
-          <Heart size={18} fill={recipe.hearted ? 'currentColor' : 'none'}/>
-        </button>
-        <button className="icon-btn delete" onClick={onUnsave} title="Remove">
-          <Trash2 size={16}/>
-        </button>
-      </div>
+
+      {recipe.ingredients && recipe.ingredients.length > 0 && (
+        <p className="saved-recipe-ingredients">
+          {recipe.ingredients.slice(0, 6).join(', ')}
+          {recipe.ingredients.length > 6 ? ` +${recipe.ingredients.length - 6} more` : ''}
+        </p>
+      )}
+
+      {recipe.steps && recipe.steps.length > 0 && (
+        <div className="recipe-instructions">
+          <button className="instructions-toggle" onClick={() => setShowSteps(v => !v)}>
+            <span>Cooking Instructions ({recipe.steps.length} steps)</span>
+            {showSteps ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
+          </button>
+          {showSteps && (
+            <ol className="instructions-list">
+              {recipe.steps.map((step, i) => (
+                <li key={i} className="instruction-step">
+                  <span className="step-number">{i + 1}</span>
+                  <span className="step-text">{step}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      )}
     </div>
-    {recipe.ingredients && recipe.ingredients.length > 0 && (
-      <p className="saved-recipe-ingredients">
-        {recipe.ingredients.slice(0, 6).join(', ')}
-        {recipe.ingredients.length > 6 ? ` +${recipe.ingredients.length - 6} more` : ''}
-      </p>
-    )}
-  </div>
-);
+  );
+};
 
 // ── Main view ────────────────────────────────────────────────────────────────
 const SavedView = () => {

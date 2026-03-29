@@ -13,13 +13,14 @@ import { useAuth } from '../contexts/AuthContext';
 import SearchForm from '../components/SearchForm';
 import RecipeList from '../components/RecipeList';
 import { Heart, TrendingUp, Search as SearchIcon, Sparkles } from 'lucide-react';
+import { searchRecipes, searchPersonalized, getRecommendations } from '../services/api';
 
 const RecipesView = () => {
   // ============================================================================
   // HOOKS
   // ============================================================================
   
-  const { isAuthenticated, getAuthHeaders } = useAuth();
+  const { isAuthenticated, token } = useAuth();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -65,16 +66,7 @@ const RecipesView = () => {
     setRecommendationsError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/recommendations?limit=10', {
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to load recommendations');
-      }
-
-      const data = await response.json();
+      const data = await getRecommendations(token, 10);
       setRecommendations(data);
     } catch (err) {
       console.error('Failed to load recommendations:', err);
@@ -95,57 +87,17 @@ const RecipesView = () => {
 
     try {
       let results;
-      
+
       if (isAuthenticated && searchMode === 'personalized') {
-        // Personalized search
-        const response = await fetch('http://localhost:8000/search/personalized', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...getAuthHeaders(),
-          },
-          body: JSON.stringify({
-            query: searchParams.query,
-            ingredients: searchParams.ingredients,
-            cuisine: searchParams.cuisine,
-            max_time: searchParams.maxTime,
-            max_results: searchParams.maxResults,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Personalized search failed');
-        }
-
-        results = await response.json();
+        results = await searchPersonalized(token, searchParams);
       } else {
-        // Regular search (with auth if logged in)
-        const headers = {
-          'Content-Type': 'application/json',
-        };
-        
-        // Add auth headers if user is logged in
-        if (isAuthenticated) {
-          Object.assign(headers, getAuthHeaders());
-        }
-        
-        const response = await fetch('http://localhost:8000/search', {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify({
-            query: searchParams.query,
-            ingredients: searchParams.ingredients,
-            cuisine: searchParams.cuisine,
-            max_time: searchParams.maxTime,
-            max_results: searchParams.maxResults,
-          }),
+        results = await searchRecipes({
+          query: searchParams.query,
+          ingredients: searchParams.ingredients,
+          cuisine: searchParams.cuisine,
+          maxTime: searchParams.maxTime,
+          maxResults: searchParams.maxResults,
         });
-
-        if (!response.ok) {
-          throw new Error('Search failed');
-        }
-
-        results = await response.json();
       }
 
       setRecipes(results);

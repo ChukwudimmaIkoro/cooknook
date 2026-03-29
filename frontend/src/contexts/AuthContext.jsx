@@ -14,6 +14,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { loginUser, registerUser } from '../services/api';
 
 // ============================================================================
 // CONTEXT CREATION
@@ -80,18 +81,24 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = () => {
       try {
-        // Try to load saved token
         const savedToken = localStorage.getItem('authToken');
         const savedUser = localStorage.getItem('authUser');
-        
+
         if (savedToken && savedUser) {
-          setToken(savedToken);
-          setUser(JSON.parse(savedUser));
-          console.log('Restored authentication session');
+          // Decode JWT payload (base64url) to check expiry — no lib needed
+          const payload = JSON.parse(atob(savedToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+          const isExpired = payload.exp && Date.now() / 1000 > payload.exp;
+
+          if (isExpired) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('authUser');
+          } else {
+            setToken(savedToken);
+            setUser(JSON.parse(savedUser));
+          }
         }
       } catch (error) {
         console.error('Failed to restore session:', error);
-        // Clear corrupted data
         localStorage.removeItem('authToken');
         localStorage.removeItem('authUser');
       } finally {
@@ -116,31 +123,13 @@ export const AuthProvider = ({ children }) => {
    */
   const login = async (username, password) => {
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const data = await loginUser(username, password);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Login failed');
-      }
-
-      const data = await response.json();
-      
-      // Save to state
       setToken(data.access_token);
       setUser(data.user);
-      
-      // Persist to localStorage
       localStorage.setItem('authToken', data.access_token);
       localStorage.setItem('authUser', JSON.stringify(data.user));
-      
-      console.log('Login successful:', data.user.username);
-      
+
       return data;
     } catch (error) {
       console.error('Login error:', error);
@@ -161,31 +150,13 @@ export const AuthProvider = ({ children }) => {
    */
   const register = async (userData) => {
     try {
-      const response = await fetch('http://localhost:8000/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
+      const data = await registerUser(userData);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Registration failed');
-      }
-
-      const data = await response.json();
-      
-      // Save to state
       setToken(data.access_token);
       setUser(data.user);
-      
-      // Persist to localStorage
       localStorage.setItem('authToken', data.access_token);
       localStorage.setItem('authUser', JSON.stringify(data.user));
-      
-      console.log('Registration successful:', data.user.username);
-      
+
       return data;
     } catch (error) {
       console.error('Registration error:', error);

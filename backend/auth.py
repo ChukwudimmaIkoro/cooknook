@@ -12,7 +12,11 @@ Features:
 
 from datetime import datetime, timedelta
 from typing import Optional
+import os
+from dotenv import load_dotenv
 from jose import JWTError, jwt
+
+load_dotenv()
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -23,8 +27,8 @@ from database import User, get_db
 # CONFIGURATION
 # ============================================================================
 
-# Secret key for JWT (in production, use environment variable!)
-SECRET_KEY = "your-secret-key-change-this-in-production"
+# Secret key for JWT — set COOKNOOK_SECRET_KEY in your environment
+SECRET_KEY = os.environ.get("COOKNOOK_SECRET_KEY", "dev-only-secret-change-before-deploy")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
@@ -164,7 +168,6 @@ def verify_token(token: str) -> Optional[str]:
             return None
         return username
     except JWTError:
-        print(f"DEBUG JWT error: {JWTError}")  # ← add this
         return None
 
 
