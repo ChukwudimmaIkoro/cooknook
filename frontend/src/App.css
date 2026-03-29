@@ -1480,3 +1480,466 @@ body {
     display: none;
   }
 }
+
+/* ==========================================================================
+   PANTRY + NOTIFICATION STYLES
+   Append to App.css
+   ========================================================================== */
+
+/* ── Pantry toolbar ──────────────────────────────────────────── */
+.pantry-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* ── Add item form ───────────────────────────────────────────── */
+.pantry-add-form {
+  background: var(--color-bg-secondary, #f0f9ff);
+  border: 1px solid var(--color-border, #bae6fd);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.form-input {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+  min-width: 0;
+}
+
+.form-input.flex-grow { flex: 1 1 140px; }
+.form-input.qty       { flex: 0 1 70px; }
+.form-input.unit      { flex: 0 1 90px; }
+.full-width           { width: 100%; }
+
+/* ── Category groups ─────────────────────────────────────────── */
+.pantry-category-group {
+  margin-bottom: 20px;
+}
+
+.pantry-category-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted, #9ca3af);
+  margin: 0 0 8px;
+}
+
+/* ── Pantry item card ────────────────────────────────────────── */
+.pantry-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-card-bg, #f9fafb);
+  border: 1px solid var(--color-border, #e5e7eb);
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.pantry-item-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pantry-item-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pantry-item-category {
+  font-size: 0.72rem;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.pantry-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pantry-item-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qty-label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #6b7280);
+}
+
+.pantry-item-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pantry-edit-input {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.pantry-edit-input.qty  { width: 60px; }
+.pantry-edit-input.unit { width: 72px; }
+
+/* ── Expiry badges ───────────────────────────────────────────── */
+.expiry-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: white;
+  border-radius: 4px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+.expiry-badge.expired  { background: #dc2626; }
+.expiry-badge.critical { background: #ea580c; }
+.expiry-badge.warning  { background: #ca8a04; }
+.expiry-badge.ok       { background: #16a34a; }
+
+/* ── Expiring warning in subtitle ────────────────────────────── */
+.expiring-warning {
+  color: #ea580c;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ── Find recipes button ─────────────────────────────────────── */
+.btn-find-recipes {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  transition: background 0.15s;
+}
+.btn-find-recipes:hover:not(:disabled) { background: #15803d; }
+.btn-find-recipes:disabled { background: #86efac; cursor: not-allowed; }
+
+/* ── Pantry recipe results ───────────────────────────────────── */
+.pantry-recipes-section {
+  margin-top: 20px;
+}
+
+.pantry-recipe-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  margin-bottom: 10px;
+}
+
+.pantry-recipe-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.pantry-recipe-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.pantry-coverage-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.pantry-recipe-expiring {
+  font-size: 0.75rem;
+  color: #ea580c;
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pantry-recipe-missing {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
+
+/* ── Icon buttons ────────────────────────────────────────────── */
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  transition: background 0.1s;
+}
+.icon-btn.edit    { color: #3b82f6; }
+.icon-btn.delete  { color: #ef4444; }
+.icon-btn.confirm { color: #16a34a; }
+.icon-btn.cancel  { color: #6b7280; }
+.icon-btn:hover   { background: rgba(0,0,0,0.07); }
+
+/* ── Spinner animation ───────────────────────────────────────── */
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Muted text ──────────────────────────────────────────────── */
+.muted-text {
+  color: var(--color-text-muted, #9ca3af);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ==========================================================================
+   NOTIFICATION BELL
+   ========================================================================== */
+
+.notification-bell-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.notification-bell-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  transition: background 0.1s;
+}
+.notification-bell-btn:hover { background: rgba(0,0,0,0.07); }
+
+.notification-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 1000;
+}
+
+.notification-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  position: sticky;
+  top: 0;
+  background: white;
+}
+
+.mark-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.notification-empty {
+  padding: 20px;
+  text-align: center;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.1s;
+}
+.notification-item.unread { background: #eff6ff; }
+.notification-item.read   { background: white; }
+.notification-item:last-child { border-bottom: none; }
+
+.notification-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 0.87rem;
+  margin: 0 0 2px;
+}
+.notification-item.read .notification-title { font-weight: 400; }
+
+.notification-message {
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.notification-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Header layout — bell + status side by side ──────────────── */
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Expiry badge colour thresholds (fixed) ──────────────────── */
+/* Override the earlier .soon rule — green only above 7 days     */
+.expiry-badge.ok       { background: #16a34a; } /* >7d  green       */
+.expiry-badge.warning  { background: #ca8a04; } /* 4-7d orange      */
+.expiry-badge.critical { background: #ea580c; } /* 1-3d orange-red  */
+.expiry-badge.expired  { background: #dc2626; } /* 0d   red         */
+
+/* ── Date field with label ───────────────────────────────────── */
+.form-date-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 140px;
+}
+.form-date-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #6b7280);
+  padding-left: 2px;
+}
+
+/* ── Ingredient chips (pantry recipe cards) ──────────────────── */
+.pantry-recipe-ingredients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.ingredient-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.chip-have     { background: #dcfce7; color: #166534; }
+.chip-expiring { background: #fef9c3; color: #854d0e; }
+.chip-need     { background: #f3f4f6; color: #6b7280; }
+
+/* ── Saved recipes ───────────────────────────────────────────── */
+.saved-section { margin-bottom: 20px; }
+
+.saved-recipe-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-color, #f9fafb);
+  border: 1px solid var(--border-color, #e5e7eb);
+  margin-bottom: 8px;
+  transition: border-color 0.15s;
+}
+.saved-recipe-card.hearted {
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+.saved-recipe-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.saved-recipe-info   { flex: 1; min-width: 0; }
+.saved-recipe-title-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 4px;
+}
+.saved-recipe-name   { font-weight: 500; font-size: 0.95rem; }
+.heart-indicator     { color: #ef4444; }
+.saved-recipe-meta   { display: flex; flex-wrap: wrap; gap: 6px; }
+.saved-recipe-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.heart-btn           { color: #9ca3af; }
+.hearted-btn         { color: #ef4444; }
+.saved-recipe-ingredients {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #6b7280);
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+/* ── Bookmark button on recipe cards ─────────────────────────── */
+.bookmark-btn    { color: #9ca3af; }
+.bookmark-active { color: #3b82f6; }
+
+/* ── Recipe card header — score + bookmark row ───────────────── */
+.recipe-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

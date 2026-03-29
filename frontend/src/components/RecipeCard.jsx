@@ -16,7 +16,9 @@
  */
 
 import React, { useState } from 'react';
-import { ChefHat, Check, X, Clock, List, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChefHat, Check, X, Clock, List, ChevronDown, ChevronUp, Bookmark } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { saveRecipe, unsaveRecipe, isRecipeSaved } from '../views/SavedView';
 
 /**
  * RecipeCard Component
@@ -36,21 +38,23 @@ import { ChefHat, Check, X, Clock, List, ChevronDown, ChevronUp } from 'lucide-r
  * @param {string} [props.recipe.description] - Recipe description
  */
 const RecipeCard = ({ recipe }) => {
-  // ============================================================================
-  // STATE MANAGEMENT
-  // ============================================================================
-  
-  /**
-   * Track whether cooking instructions are expanded
-   * Collapsed by default to keep cards compact
-   */
+  const { user } = useAuth();
+
   const [showInstructions, setShowInstructions] = useState(false);
-  
-  /**
-   * Track whether all ingredients are shown
-   * Shows only first 5 by default
-   */
   const [showAllIngredients, setShowAllIngredients] = useState(false);
+  const [bookmarked, setBookmarked] = useState(
+    user ? isRecipeSaved(user.id, recipe.id) : false
+  );
+
+  const handleBookmark = () => {
+    if (!user) return;
+    if (bookmarked) {
+      unsaveRecipe(user.id, recipe.id);
+    } else {
+      saveRecipe(user.id, recipe);
+    }
+    setBookmarked(!bookmarked);
+  };
 
   // ============================================================================
   // COMPUTED VALUES
@@ -126,7 +130,7 @@ const RecipeCard = ({ recipe }) => {
   
   return (
     <div className="recipe-card">
-      {/* Card Header - Cuisine and Score */}
+      {/* Card Header - Cuisine, Score, Bookmark */}
       <div className="recipe-header">
         <div className="recipe-cuisine">
           <ChefHat size={20} />
@@ -134,16 +138,25 @@ const RecipeCard = ({ recipe }) => {
             {recipe.cuisine.charAt(0).toUpperCase() + recipe.cuisine.slice(1)}
           </span>
         </div>
-        
-        {/* Similarity Score Badge */}
-        <div 
-          className="recipe-score"
-          style={{ 
-            backgroundColor: getScoreColor(recipe.similarity_score),
-            color: 'white'
-          }}
-        >
-          {scorePercentage}% Match
+        <div className="recipe-header-actions">
+          <div
+            className="recipe-score"
+            style={{
+              backgroundColor: getScoreColor(recipe.similarity_score),
+              color: 'white'
+            }}
+          >
+            {scorePercentage}% Match
+          </div>
+          {user && (
+            <button
+              className={`icon-btn ${bookmarked ? 'bookmark-active' : 'bookmark-btn'}`}
+              onClick={handleBookmark}
+              title={bookmarked ? 'Remove from saved' : 'Save recipe'}
+            >
+              <Bookmark size={18} fill={bookmarked ? 'currentColor' : 'none'} />
+            </button>
+          )}
         </div>
       </div>
 

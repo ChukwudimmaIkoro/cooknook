@@ -164,6 +164,7 @@ def verify_token(token: str) -> Optional[str]:
             return None
         return username
     except JWTError:
+        print(f"DEBUG JWT error: {JWTError}")  # ← add this
         return None
 
 

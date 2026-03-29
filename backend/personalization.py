@@ -1,7 +1,6 @@
 """
 Analyzes user search history to learn preferences and personalize
-recipe recommendations. Uses simple but effective heuristics combined with
-search history patterns.
+recipe recommendations. Uses heuristics combined with search history patterns.
 """
 
 from typing import List, Dict, Optional, Tuple

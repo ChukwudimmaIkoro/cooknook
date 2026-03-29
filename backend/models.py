@@ -11,8 +11,9 @@ Key Models:
 - SearchResponse: Defines the structure of search results returned to users
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
+from datetime import datetime
 
 
 #Recipe model for representing a single recipe from the dataset
@@ -160,3 +161,70 @@ class SearchResponse(BaseModel):
     minutes: Optional[int] = None
     n_steps: Optional[int] = None
     description: Optional[str] = None
+
+class PantryItemCreate(BaseModel):
+    """Request body for POST /pantry/items"""
+    ingredient_name: str = Field(..., min_length=1, max_length=100)
+    quantity: Optional[float] = Field(None, gt=0)
+    unit: Optional[str] = Field(None, max_length=50)
+    expiration_date: Optional[datetime] = None
+    category: Optional[str] = Field(None, max_length=50)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class PantryItemUpdate(BaseModel):
+    """Request body for PUT /pantry/items/{id}"""
+    quantity: Optional[float] = Field(None, gt=0)
+    unit: Optional[str] = Field(None, max_length=50)
+    expiration_date: Optional[datetime] = None
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+class PantryItemResponse(BaseModel):
+    """Response schema for a single pantry item"""
+    id: int
+    user_id: int
+    ingredient_name: str
+    quantity: Optional[float]
+    unit: Optional[str]
+    added_date: Optional[datetime]
+    expiration_date: Optional[datetime]
+    category: Optional[str]
+    notes: Optional[str]
+    days_until_expiration: Optional[int]  # Computed field
+
+    class Config:
+        from_attributes = True
+
+class PantrySearchRequest(BaseModel):
+    max_results: Optional[int] = Field(10, ge=1, le=50)
+     
+class PantrySearchResult(BaseModel):
+    """A recipe result with pantry-specific scoring fields appended."""
+    # Standard recipe fields (mirrors your existing RecipeResult model)
+    id: int
+    name: str
+    ingredients: list[str]
+    cuisine: Optional[str]
+    minutes: Optional[int]
+    similarity_score: float
+ 
+    # Pantry-specific fields
+    pantry_score: float          # Combined ranking score (0.0 – 1.0+)
+    coverage: float              # Fraction of recipe ingredients in pantry (0.0 – 1.0)
+    matched_ingredients: list[str]   # Pantry items this recipe uses
+    missing_ingredients: list[str]   # What you'd still need to buy
+    uses_expiring_soon: list[str]    # Matched items expiring within 3 days (urgency bonus)
+
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    type: str
+    title: str
+    message: str
+    action_url: Optional[str]
+    read: bool
+    created_at: datetime
+ 
+    class Config:
+        from_attributes = True
